@@ -40,7 +40,7 @@ story_count = st.sidebar.slider(
     step=1
 )
 
-# 💡 복합 네트워크 수식 연산 및 전파 속도 도출
+# 복합 네트워크 수식 연산 및 전파 속도 도출
 total_potential_pool = int(my_followers * (1 + (friends_followers * 0.4)))
 calculated_speed = story_count * (1 + (friends_followers * 0.01))
 
@@ -81,7 +81,8 @@ with col_main:
                 background: rgba(0,0,0,0.85); padding: 6px 14px; border-radius: 20px; text-align: center;
                 pointer-events: none; width: 85%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10;
             }}
-            #chart-container {{ width: 98%; margin: 5px auto; background: #262626; padding: 10px 15px; border-radius: 8px; box-sizing: border-box; position: relative; }}
+            /* 💡 칸이 숨막히지 않게 아래 패딩(padding-bottom)을 넓혀 잘림 현상을 원천 방지 */
+            #chart-container {{ width: 98%; margin: 5px auto; background: #262626; padding: 10px 15px 25px 15px; border-radius: 8px; box-sizing: border-box; position: relative; }}
             h4 {{ margin: 0 0 5px 0; color: #cbd5e1; font-size: 13px; }}
             .reset-btn {{
                 position: absolute; right: 15px; top: 8px;
@@ -103,7 +104,7 @@ with col_main:
     <div id="chart-container">
         <h4>📊 시간 경과에 따른 누적 확산 유저 수 (Y축 최대: {total_potential_pool:,}명 규모)</h4>
         <button class="reset-btn" onclick="resetAll()">🔄 처음부터 다시 시작</button>
-        <canvas id="realtimeChart" height="70"></canvas>
+        <canvas id="realtimeChart" height="85"></canvas>
     </div>
     
     <script>
@@ -120,7 +121,6 @@ with col_main:
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
     
-    // --- 📊 실시간 Chart.js 설정 (Y축 0 고정 패치) ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
     let realtimeChart;
     
@@ -149,12 +149,12 @@ with col_main:
                     x: {{ title: {{ display: true, text: '경과 시간 (초)', color: '#94a3b8', font: {{ size: 10 }} }}, ticks: {{ color: '#94a3b8', font: {{ size: 10 }} }}, grid: {{ color: '#404040' }} }},
                     y: {{ 
                         title: {{ display: true, text: '총 피해 (명)', color: '#94a3b8', font: {{ size: 10 }} }}, 
-                        min: 0, // 💡 최소값을 0으로 강제 고정
+                        min: 0, 
                         max: MAX_TARGET_USERS, 
                         ticks: {{ 
                             color: '#94a3b8', 
                             font: {{ size: 10 }},
-                            beginAtZero: true // 💡 0부터 무조건 출력되도록 설정
+                            beginAtZero: true 
                         }}, 
                         grid: {{ color: '#404040' }} 
                     }}
@@ -202,7 +202,6 @@ with col_main:
         }}
     }}
     
-    // 마우스 회전 제어
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     window.addEventListener('mousedown', () => {{ isDragging = true; }});
@@ -222,7 +221,6 @@ with col_main:
     }});
     window.addEventListener('mouseup', () => {{ isDragging = false; }});
     
-    // 리셋
     window.resetAll = function() {{
         time_elapsed = 0;
         infected_visual_count = 1;
@@ -244,7 +242,7 @@ with col_main:
         if (infected_visual_count === VISUAL_USERS) scaledInfected = MAX_TARGET_USERS;
         
         if (scaledInfected < MAX_TARGET_USERS) {{
-            infoOverlay.innerHTML = "⏱ nighttime: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
+            infoOverlay.innerHTML = "⏱️ 경과: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
         }} else {{
             infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d;'>전파 완료: 네트워크 내 " + MAX_TARGET_USERS.toLocaleString() + "명 전체 유출</span>";
         }}
@@ -286,4 +284,5 @@ with col_main:
     </body>
     </html>
     """
-    components.html(combined_embedded_code, height=440, scrolling=False)
+    # 💡 액자 프레임 높이를 440 -> 520으로 확장하여 아래쪽 픽셀을 전면 구출
+    components.html(combined_embedded_code, height=520, scrolling=False)
