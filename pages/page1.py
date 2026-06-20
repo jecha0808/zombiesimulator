@@ -16,8 +16,8 @@ ENTRY_ACTION   = "entry.553841103"
 with st.form("student_feedback_form"):
     # ───── 학생 정보 ─────
     col1, col2, col3 = st.columns([1, 1, 2])
-    c_class = col1.selectbox("반", [f"{i}반" for i in range(1, 11)])
-    c_num   = col2.selectbox("번호", [f"{i}번" for i in range(1, 34)])
+    c_class = col1.selectbox("반", [f"{i}" for i in range(1, 11)])
+    c_num   = col2.selectbox("번호", [f"{i}" for i in range(1, 34)])
     c_name  = col3.text_input("이름")
 
     st.markdown("---")
@@ -99,7 +99,7 @@ with st.form("student_feedback_form"):
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
                 if r.status_code in (200, 302):
-                    st.success(f"✅ {c_class} {c_num} {c_name} 학생, 제출 완료되었습니다! 수고했어요 👏")
+                    st.success(f"✅ {c_class}반 {c_num}번 {c_name} 학생, 제출 완료되었습니다! 수고했어요 👏")
                     st.balloons()
                 else:
                     st.error(f"제출 실패 (상태코드 {r.status_code})")
