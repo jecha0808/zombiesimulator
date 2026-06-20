@@ -142,7 +142,7 @@ with col_sim:
         }});
     }}
     
-    // 마우스 회전 제어 로직 
+    // 간단한 마우스 회전 제어 감지
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     
@@ -161,7 +161,11 @@ with col_sim:
         }}
         previousMousePosition = {{ x: e.offsetX, y: e.offsetY }};
     }});
-    window.addEventListener('mouseup', (e) => {{ isDragging = false; }}});
+    
+    // 이 부분을 중괄호 충돌이 없는 가장 안전한 구조로 한 줄씩 분리했습니다.
+    window.addEventListener('mouseup', function(e) {{
+        isDragging = false;
+    }});
     
     // [수정 핵심] 루프가 곧바로 상태 텍스트를 업데이트하도록 동기화 구조 개선
     function animate() {{
