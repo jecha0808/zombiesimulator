@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import time
 
 # 1. 스트림릿 웹 화면 구성 및 페이지 설정
 st.set_page_config(
@@ -10,98 +9,111 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🔒 [정보윤리 실습] 내 SNS 설정에 따른 개인정보 확산 속도 시뮬레이션")
+st.title("🔒 [정보윤리 실습] 2차 네트워크(팔로워의 팔로워) 기반 정보 확산 시뮬레이션")
 st.markdown("""
 교과서 225쪽 **'디지털 공간의 정보 확산'** 단원 실습 앱입니다.  
-왼쪽 제어창에서 **'나의 팔로워 수'**와 **'내가 올린 스토리 수'**를 바꾸면, 우측의 **실시간 확산 속도 곡선**이 즉각 반영됩니다.
+내 팔로워가 적어도, **그 친구들의 팔로워(2차 네트워크)**를 통해 얼마나 파괴적으로 정보가 퍼지는지 확인해 보세요.
 """)
 st.markdown("---")
 
-# 2. 사이드바 인터페이스 구성
+# 2. 사이드바 인터페이스 구성 (2차 확산 변수 추가)
 st.sidebar.header("⚙️ 내 인스타그램 환경 변수 설정")
 
-follower_count = st.sidebar.slider(
+# 변수 1: 내 팔로워 수 (1차 네트워크)
+my_followers = st.sidebar.slider(
     "1. 나의 팔로워 수 (명)", 
     min_value=10, 
-    max_value=2000, 
+    max_value=1000, 
+    value=30, 
+    step=10
+)
+
+# 변수 2: 내 팔로워들의 평균 팔로워 수 (2차 네트워크의 핵심 가중치!)
+friends_followers = st.sidebar.slider(
+    "2. 내 친구들의 평균 팔로워 수 (명)", 
+    min_value=10, 
+    max_value=500, 
     value=100, 
     step=10
 )
 
+# 변수 3: 내가 올린 스토리 수 (확산 가속도 인자)
 story_count = st.sidebar.slider(
-    "2. 내가 올린 스토리/게시글 수 (개)", 
+    "3. 내가 올린 스토리/게시글 수 (개)", 
     min_value=1, 
     max_value=10, 
     value=2, 
     step=1
 )
 
-# 스토리 수에 따른 전파 가속도 가중치
-calculated_speed = story_count * 2.5
+# 💡 1차와 2차 네트워크를 결합한 총 잠재적 노출 인구 계산
+# 중학생 아이들의 실제 겹치는 네트워크를 감안하여 현실적인 필터링 상수를 적용한 총 피해 규모
+total_potential_pool = int(my_followers * (1 + (friends_followers * 0.4)))
+
+# 스토리 수와 친구들의 네트워크 크기가 결합된 최종 확산 속도 상수
+calculated_speed = story_count * (1 + (friends_followers * 0.01))
 
 st.sidebar.markdown("---")
 st.sidebar.info("""
 **💡 시각적 가이드**
-* 🔴 **궤적이 남는 빨간 공**: 유출된 스토리/게시글 (최초 유출자)
-* ⚪ **하얀 공**: 내 스토리를 본 팔로워 및 일반 유저들
+* 🔴 **빨간 공**: 이미 정보가 유출되어 감염된 유저
+* ⚪ **하얀 공**: 아직 노출되지 않은 잠재적 유저
 * 🖱️ 3D 화면을 마우스 드래그하면 공간을 돌려볼 수 있습니다.
 """)
 
-# 🧑‍🏫 교사용 가이드 숨김 메뉴 (사이드바 내부 격리)
+# 교사용 가이드 숨김 메뉴
 st.sidebar.markdown("---")
 with st.sidebar.expander("🔐 💡 교사용 수업 가이드 (선생님만 클릭!)"):
     st.markdown(f"""
     <div style="padding: 10px; border-radius: 5px; background-color: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; font-size: 13px;">
-        <b>현재 세팅 요약</b><br>
-        • 학생 설정 팔로워: <b>{follower_count}명</b><br>
-        • 학생 설정 스토리: <b>{story_count}개</b>
+        <b>현재 시뮬레이션 연산 데이터</b><br>
+        • 내 직접 팔로워: <b>{my_followers}명</b><br>
+        • 건너건너 연결된 잠재 피해 규모: <b>{total_potential_pool:,}명</b>
     </div>
     """, unsafe_allow_html=True)
     st.caption("""
     📢 **선생님 한마디 & 지도 팁**
-    "얘들아, 내 팔로워가 10명밖에 안 된다고 해서 내가 올린 비밀이나 사진이 안전할까? 
-    비록 내 팔로워는 소수이지만, 그 친구들이 다른 친구들과 겹겹이 연결되어 있어서 순식간에 외부로 퍼져나갈 수 있어! 우측 그래프가 꺾여 올라가는 속도를 보렴!"
+    "얘들아, 우측 그래프의 Y축 최대치를 보렴. 내 팔로워는 분명 30명으로 맞췄는데, 총 피해 인원은 1,000명이 넘어가고 있지? 왜 그럴까? 
+    바로 너희 스토리를 본 30명의 친구들에게는 각자 100명씩의 또 다른 친구(팔로워의 팔로워)들이 있기 때문이야. 
+    이걸 <b>'네트워크 효과'</b>라고 부른단다. SNS에 올린 게시물은 '우리끼리만' 보는 게 절대 불가능한 구조야."
     """)
 
-# 3. 📊 안정적인 스트림릿 내부 자체 수학적 시뮬레이션 그래프 생성
-# (자바스크립트 비동기 끊김 현상을 완벽히 방절하기 위해 파이썬 내에서 S곡선 데이터 사전 생성)
-st.subheader("📈 설정 수치 기반 실시간 확산 속도 곡선")
+# 3. 📊 2차 확산 수학 모델 기반 그래프 생성 (절대 안 사라짐)
+st.subheader("📈 1차 + 2차 네트워크 결합 실시간 확산 속도 곡선")
 
-# 로지스틱 함수(S자 곡선)를 활용한 실시간 확산 데이터 프레임 구축
 time_steps = [round(x * 0.5, 1) for x in range(0, 31)] # 0초부터 15초까지
 infected_data = []
 
 for t in time_steps:
-    # 스토리 수(calculated_speed)가 높을수록 mid_point가 당겨지고 기울기가 급해짐
-    k = 0.4 + (calculated_speed * 0.05)
-    mid_point = max(3.0, 10.0 - (calculated_speed * 0.8))
+    # 2차 확산은 초반엔 완만하다가 친구의 친구 네트워크를 타는 순간 수직 상승하는 특징을 가짐
+    k = 0.2 + (calculated_speed * 0.03)
+    mid_point = max(2.5, 9.0 - (calculated_speed * 0.5))
     
-    # 로지스틱 수식 계산
-    y_val = follower_count / (1 + ((follower_count - 1) * (2.718 ** (-k * (t - mid_point)))))
+    # 로지스틱 수식 적용
+    y_val = total_potential_pool / (1 + ((total_potential_pool - 1) * (2.718 ** (-k * (t - mid_point)))))
     infected_data.append(int(y_val))
 
-# 스트림릿 순정 라인 차트용 데이터 바인딩
 chart_df = pd.DataFrame({
     "시간 (초)": time_steps,
-    "피해 팔로워 수 (명)": infected_data
+    "총 피해 유저 수 (명)": infected_data
 }).set_index("시간 (초)")
 
-# 메인 화면 레이아웃 분할 (좌측: 3D 가상 공간 / 우측: 절대 사라지지 않는 그래프)
+# 메인 레이아웃 분할
 col_sim, col_chart = st.columns([1.1, 0.9])
 
 with col_chart:
-    st.write(f"📊 **실시간 정보 유출 확산 예측선 (최대 {follower_count}명 규모)**")
-    # 스트림릿 전용 고정 차트 출력 (절대 사라지지 않음)
+    st.write(f"📊 **'팔로워의 팔로워'까지 합산된 누적 유출 그래프 (최대 {total_potential_pool:,}명 규모)**")
     st.line_chart(chart_df, height=320)
     
-    st.markdown("""
-    <div style="padding: 10px; background-color: #262626; border-radius: 5px; font-size: 12px; color: #cbd5e1;">
-        💡 <b>실험 팁</b>: 왼쪽 슬라이더의 <b>'스토리 수'</b>를 높이면 곡선이 왼쪽으로 당겨지며 가팔라지고, <b>'팔로워 수'</b>를 낮추면 Y축 한계치가 아이들의 실제 환경에 맞게 동적으로 재조정됩니다.
+    st.markdown(f"""
+    <div style="padding: 12px; background-color: #262626; border-radius: 5px; font-size: 12px; color: #cbd5e1; line-height:1.5;">
+        🎯 <b>실험 포인트</b><br>
+        • 내 팔로워 수(`1번`)를 <b>{my_followers}명</b>으로 아주 작게 설정해도, 친구들의 팔로워 수(`2번`)를 올리면 총 피해 인원이 기하급수적으로 폭증하는 것을 볼 수 있습니다.
     </div>
     """, unsafe_allow_html=True)
 
 with col_sim:
-    st.write("🎮 **3D 확산 가상 시뮬레이터**")
+    st.write("🎮 **3D 확산 가상 시뮬레이터 (공들의 전파 속도 동적 반영)**")
     
     # 3D 렌더러 독립 구동용 HTML 코드
     threejs_code = f"""
@@ -121,7 +133,7 @@ with col_sim:
     const container = document.getElementById('canvas-container');
     const CONTAINER_SIZE = 13;
     const VISUAL_USERS = 60;
-    const sharing_speed = {calculated_speed};
+    const sharing_speed = {calculated_speed}; // 2차 가중치가 반영된 속도
     const dt = 0.02;
     
     const scene = new THREE.Scene();
