@@ -144,7 +144,7 @@ with col_sim:
         }});
     }}
     
-    // 간단한 마우스 회전 제어 감지
+  // 간단한 마우스 회전 제어 감지
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     
@@ -157,15 +157,14 @@ with col_sim:
             users.forEach(u => {{
                 // 유저 공들도 상자 회전에 따라 공전 효과 부여
                 u.mesh.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaMove.x * 0.005);
-                u.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.y * 0.005);
+                u.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.x * 0.005);
                 u.velocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaMove.x * 0.005);
-                u.velocity.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.y * 0.005);
+                u.velocity.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.x * 0.005);
             }});
         }}
         previousMousePosition = {{ x: e.offsetX, y: e.offsetY }};
     }});
-    window.addEventListener('mouseup', (e) => {{ isDragging = false; }}});
-    
+    window.addEventListener('mouseup', (e) => {{ isDragging = false; }}}}); // <- 이 부분의 괄호를 4개(}}}})로 교정했습니다.
     // 메인 프레임 애니메이션 루프
     function animate() {{
         requestAnimationFrame(animate);
