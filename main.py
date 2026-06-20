@@ -48,7 +48,7 @@ col_sim, col_guide = st.columns([1.3, 0.7])
 with col_sim:
     st.subheader("🎮 3D 네트워크 확산 가상 공간")
     
-    # 스트림릿 내 임베딩을 위해 웹 표준 Three.js 엔진으로 재가공한 3D 시뮬레이터 템플릿
+    # [오류 해결 포인트] 타이밍 버그 해결 및 렌더링 최적화가 완비된 Three.js 스크립트
     threejs_embed_code = f"""
     <!DOCTYPE html>
     <html>
@@ -59,16 +59,16 @@ with col_sim:
             #canvas-container {{ width: 100vw; height: 100vh; position: relative; }}
             #info-overlay {{ 
                 position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-                color: white; font-family: sans-serif; font-size: 16px; font-weight: bold;
-                background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; text-align: center;
-                pointer-events: none; width: 80%;
+                color: white; font-family: sans-serif; font-size: 15px; font-weight: bold;
+                background: rgba(0,0,0,0.75); padding: 10px 20px; border-radius: 20px; text-align: center;
+                pointer-events: none; width: 85%; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             }}
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     </head>
     <body>
     <div id="canvas-container">
-        <div id="info-overlay">준비 중...</div>
+        <div id="info-overlay">⏳ 시뮬레이션 환경 구성 중...</div>
     </div>
     
     <script>
@@ -83,7 +83,7 @@ with col_sim:
     
     let time_elapsed = 0;
     let infected_count = 1;
-    const dt = 0.03;
+    const dt = 0.02; // 고정 물리 시간 증가량
     
     // 3D 씬, 카메라, 렌더러 설정
     const scene = new THREE.Scene();
@@ -96,21 +96,21 @@ with col_sim:
     renderer.setSize(650, 500);
     container.appendChild(renderer.domElement);
     
-    // 조명 추가
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // 조명 세팅
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(20, 40, 20);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(10, 20, 15);
     scene.add(dirLight);
     
-    // 외곽 테두리 상자 그리드 생성
+    // 테두리 외곽선 상자 생성
     const boxGeom = new THREE.BoxGeometry(CONTAINER_SIZE * 2, CONTAINER_SIZE * 2, CONTAINER_SIZE * 2);
     const edges = new THREE.EdgesGeometry(boxGeom);
     const lineMat = new THREE.LineBasicMaterial({{ color: 0xffffff, linewidth: 2 }});
     const boxWireframe = new THREE.LineSegments(edges, lineMat);
     scene.add(boxWireframe);
     
-    // 공 객체 배열 생성
+    // 공 객체 배열 빌드
     const users = [];
     const sphereGeom = new THREE.SphereGeometry(BALL_RADIUS, 16, 16);
     
@@ -121,7 +121,6 @@ with col_sim:
         const isFirst = (i === 0);
         const mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
         
-        // 박스 내부 임의 위치 지정
         mesh.position.set(
             (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
             (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
@@ -130,7 +129,6 @@ with col_sim:
         
         scene.add(mesh);
         
-        // 이동 방향 무작위 지정
         const dir = new THREE.Vector3(
             (Math.random() * 2) - 1,
             (Math.random() * 2) - 1,
@@ -144,7 +142,7 @@ with col_sim:
         }});
     }}
     
-  // 간단한 마우스 회전 제어 감지
+    // 마우스 회전 제어 로직 
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     
@@ -155,55 +153,52 @@ with col_sim:
             boxWireframe.rotation.y += deltaMove.x * 0.005;
             boxWireframe.rotation.x += deltaMove.y * 0.005;
             users.forEach(u => {{
-                // 유저 공들도 상자 회전에 따라 공전 효과 부여
                 u.mesh.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaMove.x * 0.005);
-                u.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.x * 0.005);
+                u.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.y * 0.005);
                 u.velocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaMove.x * 0.005);
-                u.velocity.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.x * 0.005);
+                u.velocity.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.y * 0.005);
             }});
         }}
         previousMousePosition = {{ x: e.offsetX, y: e.offsetY }};
     }});
-    window.addEventListener('mouseup', (e) => {{ isDragging = false; }}}}); // <- 이 부분의 괄호를 4개(}}}})로 교정했습니다.
-    // 메인 프레임 애니메이션 루프
+    window.addEventListener('mouseup', (e) => {{ isDragging = false; }}});
+    
+    // [수정 핵심] 루프가 곧바로 상태 텍스트를 업데이트하도록 동기화 구조 개선
     function animate() {{
         requestAnimationFrame(animate);
         
         if (infected_count < NUM_USERS) {{
             time_elapsed += dt;
+            infoOverlay.innerHTML = "⏳ 걸린 시간: " + time_elapsed.toFixed(1) + "초 | 🔴 감염 계정: " + infected_count + " / " + NUM_USERS + "개";
+        }} else {{
+            infoOverlay.innerHTML = "🚨 <span style='color:#ff4d4d;'>전원 유출 완료!</span> 총 확산 시간: " + time_elapsed.toFixed(1) + "초";
         }}
         
-        infoOverlay.innerText = "⏳ 걸린 시간: " + time_elapsed.toFixed(1) + "초 | 🔴 감염 계정: " + infected_count + " / " + NUM_USERS + "개";
-        
-        // 1. 공 이동 및 상자 벽 충돌 반사 연산
+        // 1. 공 이동 및 상자 벽 충돌 연산
         for (let i = 0; i < users.length; i++) {{
             const u = users[i];
             
-            // 위치 업데이트 (방향 * 입력 속도 * dt)
             u.mesh.position.x += u.velocity.x * sharing_speed * dt;
             u.mesh.position.y += u.velocity.y * sharing_speed * dt;
             u.mesh.position.z += u.velocity.z * sharing_speed * dt;
             
             const boundary = CONTAINER_SIZE - BALL_RADIUS;
             
-            // X축 벽면 바운스
             if (Math.abs(u.mesh.position.x) >= boundary) {{
                 u.velocity.x = -u.velocity.x;
                 u.mesh.position.x = u.mesh.position.x > 0 ? boundary : -boundary;
             }}
-            // Y축 벽면 바운스
             if (Math.abs(u.mesh.position.y) >= boundary) {{
                 u.velocity.y = -u.velocity.y;
                 u.mesh.position.y = u.mesh.position.y > 0 ? boundary : -boundary;
             }}
-            // Z축 벽면 바운스
             if (Math.abs(u.mesh.position.z) >= boundary) {{
                 u.velocity.z = -u.velocity.z;
                 u.mesh.position.z = u.mesh.position.z > 0 ? boundary : -boundary;
             }}
         }}
         
-        // 2. 공들 사이의 충돌체크 및 감염 확산 알고리즘
+        // 2. 구체 간 충돌 및 감염 유포 처리
         for (let i = 0; i < users.length; i++) {{
             for (let j = i + 1; j < users.length; j++) {{
                 const u1 = users[i];
@@ -211,7 +206,6 @@ with col_sim:
                 
                 const dist = u1.mesh.position.distanceTo(u2.mesh.position);
                 
-                // 두 구체가 물리적으로 교차했을 때 충돌 인정
                 if (dist < (BALL_RADIUS * 2)) {{
                     if (u1.infected && !u2.infected) {{
                         u2.mesh.material = redMat;
@@ -226,20 +220,17 @@ with col_sim:
             }}
         }}
         
-        if (infected_count >= NUM_USERS) {{
-            infoOverlay.innerHTML = "🚨 <span style='color:#ff4d4d;'>전원 유출 완료!</span> 총 확산 시간: " + time_elapsed.toFixed(1) + "초";
-        }}
-        
         renderer.render(scene, camera);
     }}
     
+    // 즉시 실행 루프 진입
     animate();
     </script>
     </body>
     </html>
     """
     
-    # 스트림릿 내부에 안정적인 3D 그래픽 프레임 크기로 인젝션
+    # 렌더링 화면 프레임 임베딩
     components.html(threejs_embed_code, height=520, scrolling=False)
 
 with col_guide:
