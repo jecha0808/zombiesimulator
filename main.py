@@ -142,7 +142,6 @@ combined_embedded_code = f"""
 <body>
 
 <div id="canvas-container">
-    <div id="ball-count-badge">🟢 사용자 수: {VISUAL_USERS}명</div>
     <div id="info-overlay">⏳ 시뮬레이션 준비 중...</div>
     <div id="finish-banner"></div>
 </div>
