@@ -1,18 +1,17 @@
 import streamlit as st
-import urllib.parse
 import requests
 
 st.markdown("---")
 st.header("📝 [활동지] 정보 확산 분석 및 윤리적 실천 다짐")
 
-# 👇 본인 구글 폼의 formResponse URL과 entry ID로 교체
-GOOGLE_FORM_URL = "https://docs.google.com/spreadsheets/d/1O8VwyjNp08xU_H-JcMBFSBtXBJRn3-sOB-jCESBKsM0/edit?usp=sharing"
-ENTRY_CLASS    = "entry.1111111111"
-ENTRY_NUM      = "entry.2222222222"
-ENTRY_NAME     = "entry.3333333333"
-ENTRY_ANALYSIS = "entry.4444444444"
-ENTRY_PROMISE  = "entry.5555555555"
-ENTRY_ACTION   = "entry.6666666666"
+# ✅ 본인 구글 폼 정보 (이미 매칭 완료)
+GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeeEazvp_aUDB0T2Syaab1JrxayUt_ltVU2b_1lONbwKsXT8A/formResponse"
+ENTRY_CLASS    = "entry.1744528295"   # 반
+ENTRY_NUM      = "entry.973302941"    # 번호
+ENTRY_NAME     = "entry.560543267"    # 이름
+ENTRY_ANALYSIS = "entry.1308568821"   # 시뮬레이션 관찰 및 데이터 해석
+ENTRY_PROMISE  = "entry.867457307"    # 디지털 정보 윤리에 대한 나의 다짐
+ENTRY_ACTION   = "entry.553841103"    # 향후 실천할 구체적인 행동 수칙
 
 with st.form("student_feedback_form"):
     col1, col2, col3 = st.columns(3)
@@ -39,10 +38,14 @@ with st.form("student_feedback_form"):
                 ENTRY_ACTION:   action_plan,
             }
             try:
-                r = requests.post(GOOGLE_FORM_URL, data=payload, timeout=10)
-                # 구글 폼은 정상 제출 시 200 또는 302 반환
+                r = requests.post(
+                    GOOGLE_FORM_URL,
+                    data=payload,
+                    timeout=10,
+                    headers={"User-Agent": "Mozilla/5.0"}
+                )
                 if r.status_code in (200, 302):
-                    st.success(f"{c_name} 학생, 제출 완료되었습니다!")
+                    st.success(f"✅ {c_name} 학생, 제출 완료되었습니다!")
                 else:
                     st.error(f"제출 실패 (상태코드 {r.status_code})")
             except Exception as e:
