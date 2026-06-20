@@ -16,7 +16,7 @@ st.markdown("""
 """)
 st.markdown("---")
 
-# 2. 사이드바 인터페이스 구성 (학생 실시간 조작 변수)
+# 2. 사이드바 인터페이스 구성
 st.sidebar.header("⚙️ 내 인스타그램 환경 변수 설정")
 
 follower_count = st.sidebar.slider(
@@ -35,7 +35,6 @@ story_count = st.sidebar.slider(
     step=1
 )
 
-# 스토리 수에 비례한 확산 속도 가중치 계산
 calculated_speed = story_count * 2.5
 
 st.sidebar.markdown("---")
@@ -46,8 +45,7 @@ st.sidebar.info("""
 * 🖱️ 3D 화면을 마우스 드래그하면 공간을 돌려볼 수 있습니다.
 """)
 
-
-# 🧑‍🏫 [선생님 전용 기능] 교사용 가이드 및 선생님 한마디 숨김 메뉴
+# 교사용 가이드 숨김 메뉴
 st.sidebar.markdown("---")
 with st.sidebar.expander("🔐 💡 교사용 수업 가이드 (선생님만 클릭!)"):
     st.markdown(f"""
@@ -60,22 +58,15 @@ with st.sidebar.expander("🔐 💡 교사용 수업 가이드 (선생님만 클
     
     st.caption("""
     📢 **선생님 한마디 & 지도 팁**
-    
     "얘들아, 내 팔로워가 10명밖에 안 된다고 해서 내가 올린 비밀이나 사진이 안전할까? 
     내가 올린 스토리 수가 많아지면 하단 그래프의 기울기가 엄청나게 가팔라지는 걸 봐봐. 
-    
-    비록 내 팔로워는 10명이지만, 그 10명의 친구들에게도 각자 10명씩의 또 다른 팔로워들이 겹겹이 연결되어 있단다. 결국 디지털 세상에서는 내가 단 10명에게만 보여준 이야기라도 궤적(선)을 그리며 순식간에 외부로 퍼져나갈 수 있어!"
-    
-    **💡 수업 추천 발문:**
-    1. 팔로워 수를 10명으로 고정하고 스토리를 1개에서 10개로 늘릴 때 그래프의 '폭발 시점(기울기)'이 얼마나 당겨지는지 비교하게 하세요.
-    2. 수치를 변경한 후에는 화면 내에 있는 '🔄 시뮬레이션 리셋' 버튼을 누르도록 안내해 주세요.
+    결국 디지털 세상에서는 내가 단 10명에게만 보여준 이야기라도 순식간에 외부로 퍼져나갈 수 있어!"
     """)
 
-# 3. 레이아웃 분할 (메인 화면 극대화)
-col_sim, col_empty = st.columns([1.8, 0.2]) # 화면을 넓게 쓰기 위해 비율 조정
+# 3. 메인 레이아웃 출력
+col_sim, col_empty = st.columns([1.8, 0.2])
 
 with col_sim:
-    # 3D 렌더러, Chart.js 그래프, 그리고 리셋 버튼까지 하나의 JS 컨텍스트로 묶어 완벽한 리셋 구현
     combined_embed_code = f"""
     <!DOCTYPE html>
     <html>
@@ -92,8 +83,6 @@ with col_sim:
             }}
             #chart-container {{ width: 95%; margin: 15px auto; background: #262626; padding: 15px; border-radius: 10px; box-sizing: border-box; position: relative; }}
             h4 {{ margin: 0 0 10px 0; color: #cbd5e1; font-size: 14px; }}
-            
-            /* 자바스크립트 통합형 리셋 버튼 스타일 */
             .reset-btn {{
                 position: absolute; right: 15px; top: 10px;
                 background-color: #ef4444; color: white; border: none;
@@ -131,7 +120,6 @@ with col_sim:
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
     const dt = 0.02;
-    let animationFrameId;
     
     // --- Chart.js 초기화 ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
@@ -159,13 +147,13 @@ with col_sim:
                 plugins: {{ legend: {{ display: false }} }},
                 scales: {{
                     x: {{ title: {{ display: true, text: '시간 (초)', color: '#94a3b8' }}, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }},
-                    y: {{ title: {{ display: true, text: '피해 인원 (명)', color: '#94a3b8' }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }}
+                    y: {{ title: {{ display: true, text: '피해 인원 (명)', color: '#94a3b8' }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8' }}, grid: '#404040' }}
                 }}
             }}
         }});
     }}
     
-    // --- Three.js 환경 초기화 ---
+    // --- Three.js 초기화 ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a1a);
     
@@ -187,7 +175,7 @@ with col_sim:
     );
     scene.add(boxWireframe);
     
-    const users = [];
+    let users = [];
     const sphereGeom = new THREE.SphereGeometry(BALL_RADIUS, 16, 16);
     const whiteMat = new THREE.MeshPhongMaterial({{ color: 0xffffff, shininess: 30 }});
     const redMat = new THREE.MeshPhongMaterial({{ color: 0xff0000, emissive: 0x220000, shininess: 50 }});
@@ -201,25 +189,27 @@ with col_sim:
     const trailLine = new THREE.Line(trailGeometry, trailMaterial);
     scene.add(trailLine);
     
-    // 유저 노드 배치 및 속도 기입 함수
+    // 💡 무대 청소 로직을 추가하여 중복 생성 방지
     function setupUsers() {{
-        users.length = 0;
+        // 기존에 생성되어 scene에 존재하던 유저 메쉬들을 완벽하게 제거
+        users.forEach(u => {{
+            scene.remove(u.mesh);
+            if(u.mesh.geometry) u.mesh.geometry.dispose();
+            if(u.mesh.material) u.mesh.material.dispose();
+        }});
+        
+        users = []; // 배열 초기화
+        
         for (let i = 0; i < VISUAL_USERS; i++) {{
             const isFirst = (i === 0);
-            let mesh;
-            if(scene.children.includes(users[i]?.mesh)) {{
-                mesh = users[i].mesh;
-                mesh.material = isFirst ? redMat : whiteMat;
-            }} else {{
-                mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
-                scene.add(mesh);
-            }}
+            const mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
             
             mesh.position.set(
                 (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
                 (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
                 (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1)
             );
+            scene.add(mesh);
             
             users.push({{
                 mesh: mesh,
@@ -229,7 +219,7 @@ with col_sim:
         }}
     }}
     
-    // 마우스 핸들러 익명 제어
+    // 드래그 제어
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     window.addEventListener('mousedown', function(e) {{ isDragging = true; }});
@@ -249,7 +239,7 @@ with col_sim:
     }});
     window.addEventListener('mouseup', function(e) {{ isDragging = false; }});
     
-    // 🔄 내부 즉각 리셋 제어 함수 (렉 원천 차단)
+    // 완벽한 리셋 함수
     window.resetSimulation = function() {{
         time_elapsed = 0;
         infected_visual_count = 1;
@@ -259,9 +249,8 @@ with col_sim:
         setupUsers();
     }}
     
-    // 메인 루프 실행 부
     function animate() {{
-        animationFrameId = requestAnimationFrame(animate);
+        requestAnimationFrame(animate);
         
         if (infected_visual_count < VISUAL_USERS) {{
             time_elapsed += dt;
@@ -297,7 +286,7 @@ with col_sim:
             if (Math.abs(u.mesh.position.z) >= boundary) {{ u.velocity.z = -u.velocity.z; u.mesh.position.z = u.mesh.position.z > 0 ? boundary : -boundary; }}
         }}
         
-        const firstUserPos = users[0].mesh.position;
+        const firstUserPos = users[0]?.mesh?.position || new THREE.Vector3();
         trailPoints.push(new THREE.Vector3(firstUserPos.x, firstUserPos.y, firstUserPos.z));
         if (trailPoints.length > maxTrailLength) {{ trailPoints.shift(); }}
         const positions = trailLine.geometry.attributes.position.array;
@@ -320,7 +309,6 @@ with col_sim:
         renderer.render(scene, camera);
     }}
     
-    // 초기 로딩 프로세서
     initChart();
     setupUsers();
     animate();
