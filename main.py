@@ -12,29 +12,26 @@ st.markdown("""
 교과서 225쪽 실습 앱입니다. 화면을 크게 키우면서도 **3D 시뮬레이션 공간 전체가 한눈에 보이도록** 카메라 앵글을 최적화했습니다.
 """)
 
-# 사이드바
 st.sidebar.header("⚙️ 시뮬레이션 환경 설정")
 
 my_followers = st.sidebar.slider(
     "1. 나의 팔로워 수 (명)",
     min_value=0, max_value=1000, value=30, step=10
 )
-
 friends_followers = st.sidebar.slider(
     "2. 내 친구들의 평균 팔로워 수 (명)",
     min_value=0, max_value=500, value=100, step=10
 )
-
 story_count = st.sidebar.slider(
     "3. 게시글 확산 빈도 (단위)",
     min_value=1, max_value=10, value=2, step=1
 )
 
-# 누적 피해 풀 & 확산 속도
-total_potential_pool = int(my_followers * (1 + (friends_followers * 0.4)))
+# 누적 피해 풀 & 속도 (최소 1 보장)
+total_potential_pool = max(1, int(my_followers * (1 + (friends_followers * 0.4))))
 calculated_speed = story_count * (1 + (friends_followers * 0.01))
 
-# ───── ⭐ 시각화 공 개수 계산 ⭐ ─────
+# ───── 시각화 공 개수 계산 ─────
 def map_followers(val, threshold, slider_max, max_extra):
     if val <= threshold:
         return val
@@ -42,12 +39,13 @@ def map_followers(val, threshold, slider_max, max_extra):
         ratio = (val - threshold) / (slider_max - threshold)
         return threshold + int(ratio * max_extra)
 
-# 내 팔로워: 0~100 1:1, 100~1000 압축
-visual_my       = map_followers(my_followers, threshold=100, slider_max=1000, max_extra=50)
-# 친구 팔로워: 0~500 전 구간 1:1
-visual_extended = map_followers(friends_followers, threshold=500, slider_max=500, max_extra=0)
+if my_followers == 0:
+    visual_my = 0
+    visual_extended = 0
+else:
+    visual_my       = map_followers(my_followers,      threshold=100, slider_max=1000, max_extra=50)
+    visual_extended = map_followers(friends_followers, threshold=500, slider_max=500,  max_extra=0)
 
-# 안전 상한선 400개
 VISUAL_USERS = max(1, min(400, visual_my + visual_extended))
 
 # 사이드바 안내
@@ -55,17 +53,23 @@ st.sidebar.markdown("---")
 st.sidebar.metric(
     label="🎯 현재 시뮬레이션 공 개수",
     value=f"{VISUAL_USERS}개",
-    help="친구 팔로워는 0~500 전 구간이 1:1로 매핑됩니다. 내 팔로워는 0~100까지 1:1입니다."
+    help="내 팔로워가 0이면 정보가 퍼지지 않으므로 본인 1명만 표시됩니다."
 )
 
-exact_my       = "✅ 1:1" if my_followers      <= 100 else "📦 압축"
-exact_extended = "✅ 1:1"  # 친구는 항상 1:1
-
-st.sidebar.caption(
-    f"• 내 직접 영향권: **{visual_my}명** ({exact_my})\n\n"
-    f"• 친구의 친구까지: **+{visual_extended}명** ({exact_extended})\n\n"
-    f"• 누적 피해 규모(수치): **{total_potential_pool:,}명**"
-)
+if my_followers == 0:
+    st.sidebar.caption(
+        f"⛔ **내 팔로워가 0명이라 정보가 어디로도 퍼지지 않습니다.**\n\n"
+        f"• 시뮬레이션 인원: **본인 1명**\n\n"
+        f"• 누적 피해 규모(수치): **0명**"
+    )
+else:
+    exact_my       = "✅ 1:1" if my_followers <= 100 else "📦 압축"
+    exact_extended = "✅ 1:1"
+    st.sidebar.caption(
+        f"• 내 직접 영향권: **{visual_my}명** ({exact_my})\n\n"
+        f"• 친구의 친구까지: **+{visual_extended}명** ({exact_extended})\n\n"
+        f"• 누적 피해 규모(수치): **{total_potential_pool:,}명**"
+    )
 
 if VISUAL_USERS >= 350:
     st.sidebar.warning("⚠️ 공이 매우 많아 브라우저 성능에 따라 다소 버벅일 수 있습니다.")
@@ -143,7 +147,6 @@ combined_embedded_code = f"""
     const sharing_speed = {calculated_speed};
     const dt = 0.02;
 
-    // 공 개수에 따른 자동 크기 조정 (4단계)
     const sphereRadius = VISUAL_USERS > 300 ? 0.20
                        : VISUAL_USERS > 150 ? 0.28
                        : VISUAL_USERS > 80  ? 0.36
