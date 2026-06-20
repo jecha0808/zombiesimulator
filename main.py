@@ -114,6 +114,15 @@ combined_embedded_code = f"""
             background: rgba(0,0,0,0.85); padding: 6px 14px; border-radius: 6px;
             z-index: 10; border: 1px solid #333;
         }}
+        #finish-banner {{
+            display: none;
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: #ef4444; color: white;
+            padding: 10px 25px; border-radius: 8px;
+            font-size: 16px; font-weight: bold;
+            z-index: 15; border: 2px solid #fff;
+            text-align: center;
+        }}
         #chart-container {{ 
             width: 96%; margin: auto; height: 37vh;
             background: #222222; padding: 15px; border-radius: 12px;
@@ -135,6 +144,7 @@ combined_embedded_code = f"""
 <div id="canvas-container">
     <div id="ball-count-badge">🟢 사용자 수: {VISUAL_USERS}명</div>
     <div id="info-overlay">⏳ 시뮬레이션 준비 중...</div>
+    <div id="finish-banner"></div>
 </div>
 
 <div id="chart-container">
@@ -146,6 +156,7 @@ combined_embedded_code = f"""
 <script>
     const container = document.getElementById('canvas-container');
     const infoOverlay = document.getElementById('info-overlay');
+    const finishBanner = document.getElementById('finish-banner');
 
     const VISUAL_USERS = {VISUAL_USERS};
     const MAX_TARGET_USERS = {total_potential_pool};
@@ -254,6 +265,7 @@ combined_embedded_code = f"""
         time_elapsed = 0; infected_visual_count = 1; last_chart_update_time = 0;
         realtimeChart.data.labels = [0]; realtimeChart.data.datasets[0].data = [1];
         realtimeChart.update(); setupUsers();
+        finishBanner.style.display = 'none';   // 🟢 배너 숨김
     }};
 
     function animate() {{
@@ -267,7 +279,18 @@ combined_embedded_code = f"""
         if (scaled < MAX_TARGET_USERS) {{
             infoOverlay.innerHTML = "⏱️ 경과: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaled.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
         }} else {{
-            infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d;'>전파 완료: 네트워크 내 " + MAX_TARGET_USERS.toLocaleString() + "명 전체 유출</span>";
+            // 🟢 완료 메시지에 시간 포함
+            infoOverlay.innerHTML = "🏁 <span style='color:#ffd166;'>전파 완료까지 " 
+                + time_elapsed.toFixed(1) + "초</span> | <span style='color:#ff4d4d;'>" 
+                + MAX_TARGET_USERS.toLocaleString() + "명 전체 유출</span>";
+            
+            // 🟢 완료 배너 (최초 1회만 띄움)
+            if (finishBanner.style.display !== 'block') {{
+                finishBanner.innerHTML = "⏱ 단 <span style='color:#ffd166;font-size:20px;'>" 
+                    + time_elapsed.toFixed(1) + "초</span> 만에 " 
+                    + MAX_TARGET_USERS.toLocaleString() + "명에게 모두 퍼졌습니다";
+                finishBanner.style.display = 'block';
+            }}
         }}
 
         if (time_elapsed - last_chart_update_time > 0.15 && infected_visual_count <= VISUAL_USERS) {{
@@ -304,6 +327,7 @@ combined_embedded_code = f"""
 </body>
 </html>
 """
+
 
 
 components.html(combined_embedded_code, height=850, scrolling=False)
