@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import numpy as np
 
 # 1. 스트림릿 웹 화면 구성 및 페이지 설정
 st.set_page_config(
@@ -10,43 +9,66 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🔒 [정보윤리 시뮬레이션] 내 개인정보가 100만 명에게 퍼지는 시간")
+st.title("🔒 [정보윤리 실습] 내 SNS 설정에 따른 개인정보 확산 속도 시뮬레이션")
 st.markdown("""
-교과서의 **'디지털 공간에서 정보의 확산 속도'**를 연예인 루머 유포 사례 및 100만 명 규모의 가상 네트워크와 연계한 심화 실습 앱입니다.  
-왼쪽 사이드바에서 **공유 속도(파급력)**를 조절하며, 단 하나의 최초 유출 궤적이 어떻게 기하급수적인 대재앙으로 이어지는지 관찰해 보세요.
+교과서 225쪽 **'디지털 공간의 정보 확산'** 단원 실습 앱입니다.  
+왼쪽 제어창에서 **'내가 올린 스토리 수'**와 **'내 팔로워 수'**를 자유롭게 바꾸어 보세요. 수치를 변경할 때마다 오른쪽 그래프의 폭발 구간과 3D 공간의 유출 궤적이 실시간으로 완전히 달라집니다.
 """)
 st.markdown("---")
 
-# 2. 사이드바 인터페이스 구성 (학생 조작 포인트)
-st.sidebar.header("⚙️ 디지털 파급력 설정")
+# 2. 사이드바 인터페이스 구성 (학생 실시간 조작 변수)
+st.sidebar.header("⚙️ 내 인스타그램 환경 변수 설정")
 
-sharing_speed = st.sidebar.slider(
-    "1. 정보의 자극성 및 공유 속도", 
+# 변수 1: 팔로워 수 (네트워크의 총 크기)
+follower_count = st.sidebar.slider(
+    "1. 나의 팔로워 수 (명)", 
+    min_value=100, 
+    max_value=50000, 
+    value=500, 
+    step=100
+)
+
+# 변수 2: 내가 올린 스토리 수 (정보의 유출/공유 빈도 -> 속도 가속화 변수)
+story_count = st.sidebar.slider(
+    "2. 내가 올린 스토리/게시글 수 (개)", 
     min_value=1, 
-    max_value=15, 
-    value=5, 
+    max_value=10, 
+    value=2, 
     step=1
 )
+
+# 스토리 수와 기본 전파 로직을 결합한 실시간 확산 속도 가중치 계산
+calculated_speed = story_count * 2.5
 
 st.sidebar.markdown("---")
 st.sidebar.info("""
 **💡 시각적 가이드**
-* 🔴 **궤적이 남는 빨간 공**: 최초 유출자 (연예인 루머/개인정보 최초 게시물)
-* ⚪ **하얀 공**: 일반 대중 및 SNS 유저 (전파 매개체)
-* 🖱️ 3D 화면을 마우스 클릭 후 드래그하면 카메라 각도를 돌려볼 수 있습니다.
+* 🔴 **궤적이 남는 빨간 공**: 유출된 스토리/게시글 (최초 유출자)
+* ⚪ **하얀 공**: 내 스토리를 본 팔로워 및 일반 유저들
+* 🖱️ 3D 화면을 마우스 드래그하면 공간을 돌려볼 수 있습니다.
 """)
 
-# 3. 실시간 그래프 출력을 위한 스트림릿 세션 상태(Session State) 초기화
+# 3. 실시간 그래프 데이터 저장을 위한 세션 상태 초기화
 if "chart_data" not in st.session_state:
     st.session_state.chart_data = pd.DataFrame(columns=["시간(초)", "피해 유저 수(명)"]).set_index("시간(초)")
 
-# 4. 레이아웃 분할 (좌측: 3D 시뮬레이터 / 우측: 실시간 그래프 및 교육 리포트)
+# 변수가 바뀌면 이전 그래프 데이터를 자동으로 리셋하여 실시간 동기화
+if "prev_follower" not in st.session_state or "prev_story" not in st.session_state:
+    st.session_state.prev_follower = follower_count
+    st.session_state.prev_story = story_count
+
+if st.session_state.prev_follower != follower_count or st.session_state.prev_story != story_count:
+    st.session_state.chart_data = pd.DataFrame(columns=["시간(초)", "피해 유저 수(명)"]).set_index("시간(초)")
+    st.session_state.prev_follower = follower_count
+    st.session_state.prev_story = story_count
+
+# 4. 레이아웃 분할 (좌측: 3D 시뮬레이터 / 우측: 실시간 변동 그래프 및 토의 리포트)
 col_sim, col_chart = st.columns([1.1, 0.9])
 
 with col_sim:
-    st.subheader("🎮 3D 네트워크 확산 및 궤적 시각화")
+    st.subheader("🎮 3D 확산 시각화")
     
-    # [시각화 연동] 자바스크립트에서 계산된 확산 데이터를 스트림릿 세션이나 부모 창으로 전달할 수 있도록 구성된 Three.js 스크립트
+    # 입력된 수치(follower_count, calculated_speed)가 실시간으로 주입되는 Three.js 코드
     threejs_embed_code = f"""
     <!DOCTYPE html>
     <html>
@@ -75,9 +97,9 @@ with col_sim:
     
     const CONTAINER_SIZE = 15;
     const VISUAL_USERS = 60; 
-    const MAX_TARGET_USERS = 1000000; 
+    const MAX_TARGET_USERS = {follower_count}; // 실시간 변경되는 팔로워 수 적용
     const BALL_RADIUS = 0.5;
-    const sharing_speed = {sharing_speed};
+    const sharing_speed = {calculated_speed};  // 실시간 변경되는 스토리 비례 속도 적용
     
     let time_elapsed = 0;
     let infected_visual_count = 1;
@@ -169,12 +191,11 @@ with col_sim:
         if (infected_visual_count === VISUAL_USERS) scaledInfected = MAX_TARGET_USERS;
         
         if (scaledInfected < MAX_TARGET_USERS) {{
-            infoOverlay.innerHTML = "⏱️ 경과 시간: " + time_elapsed.toFixed(1) + "초<br>🚨 <span style='color:#ff4d4d;'>가상 피해 인구 수: " + scaledInfected.toLocaleString() + "명</span> / 1,000,000명";
+            infoOverlay.innerHTML = "⏱️ 경과 시간: " + time_elapsed.toFixed(1) + "초<br>🚨 <span style='color:#ff4d4d;'>가상 피해 팔로워 수: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
         }} else {{
-            infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d; font-size:16px;'>전파 종료: 가상 SNS 유저 1,000,000명 전원 감염</span><br>⏳ 총 확산 소요 시간: " + time_elapsed.toFixed(1) + "초";
+            infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d; font-size:15px;'>전파 종료: 내 팔로워 " + MAX_TARGET_USERS.toLocaleString() + "명 전체 유출 완료</span><br>⏳ 총 확산 소요 시간: " + time_elapsed.toFixed(1) + "초";
         }}
         
-        // 부모 스트림릿 창으로 실시간 데이터 전송 (0.2초 간격 렌더링 스로틀링)
         if (time_elapsed - last_reported_time > 0.2 && infected_visual_count <= VISUAL_USERS) {{
             window.parent.postMessage({{
                 type: "streamlit_zombie_update",
@@ -227,17 +248,12 @@ with col_sim:
     
     components.html(threejs_embed_code, height=500, scrolling=False)
 
-# 5. 자바스크립트가 보내온 실시간 데이터를 파이썬 Pandas DataFrame에 축적하는 컴포넌트 라이더
-import json
-from streamlit_js_eval import streamlit_js_eval
-
-# 자바스크립트의 postMessage를 수신하기 위한 더미 웹 컴포넌트 리스너 설정
+# 부모-자식 데이터 통신용 브릿지
 st_components_listener = f"""
 <script>
 window.addEventListener("message", (event) => {{
     if (event.data && event.data.type === "streamlit_zombie_update") {{
         const data = event.data;
-        // 스트림릿 백엔드가 인식 가능한 보이지 않는 입력창에 값 주입
         const input = window.parent.document.getElementById("zombie_data_bridge");
         if (input) {{
             input.value = data.time + "," + data.infected;
@@ -249,11 +265,10 @@ window.addEventListener("message", (event) => {{
 """
 components.html(st_components_listener, height=0, width=0)
 
-# 실시간 스트림릿 데이터 축적 연동용 세션 핸들링 공간
+# 5. 실시간 동적 차트 출력 및 수업 가이드 영역
 with col_chart:
-    st.subheader("📈 실시간 정보 확산 속도 곡선 (100만 명 기준)")
+    st.subheader("📈 설정 수치 기반 실시간 확산 속도 곡선")
     
-    # 3D 가상 공간 데이터를 받아오기 위한 데이터 링커 헬퍼 설정
     data_carrier = st.text_input("data_bridge", value="", key="zombie_data_bridge", label_visibility="collapsed")
     
     if data_carrier:
@@ -262,28 +277,32 @@ with col_chart:
             t_val = float(t_val)
             inf_val = int(inf_val)
             
-            # 기존 데이터프레임에 실시간 스냅샷 추가
             if t_val not in st.session_state.chart_data.index:
-                new_row = pd.DataFrame([[inf_val]], columns=["피해 유저 수(명)"], index=[t_val])
+                new_row = pd.DataFrame([[inf_val]], columns=["피해 팔로워 수(명)"], index=[t_val])
                 st.session_state.chart_data = pd.concat([st.session_state.chart_data, new_row])
         except:
             pass
 
-    # 📊 실시간 스트림릿 차트 그리기
     if not st.session_state.chart_data.empty:
-        st.line_chart(st.session_state.chart_data, height=300)
+        st.line_chart(st.session_state.chart_data, height=260)
     else:
-        st.info("시뮬레이션이 시작되면 이곳에 실시간 확산 속도 그래프가 그려집니다.")
+        st.info("왼쪽 슬라이더 수치를 조절하면 여기에 새로운 확산 곡선이 즉시 그려집니다.")
 
-    st.subheader("💡 대중예술인(연예인)과 정보윤리")
-    st.error("""
-    🎬 **왜 초반보다 중반 이후에 속도가 무섭게 빨라질까요?**
+    # 🧑‍🏫 수치 변화에 따른 인과관계 가이드 카드
+    st.markdown(f"""
+    <div style="padding: 15px; border-radius: 8px; background-color: #f8fafc; color: #1e293b; border-left: 5px solid #64748b; margin-top: 10px;">
+        ⚙️ <b>시뮬레이션 실시간 추적 데이터</b><br>
+        • 설정된 총 팔로워(Y축 최대치): <b>{follower_count:,}명</b><br>
+        • 내가 올린 스토리 수(가속도 인자): <b>{story_count}개</b>
+    </div>
+    """, unsafe_allow_html=True)
     
-    그래프를 보면 알 수 있듯이, 초반(1~5초)에는 피해자 수가 완만하게 증가합니다. 그러나 감염된 매개체(빨간 공)들이 많아지는 시점부터는 사방에서 동시다발적 접촉이 일어나며 **그래프 기울기가 수직에 가깝게 폭발적으로 상승(기하급수적 증가)**합니다. 
-    
-    연예인 악성 루머가 단 몇 분 만에 온 인터넷을 도배하고 100만 명에게 도달하는 물리적 이유가 바로 이 그래프의 '기울기 급변 폭발 구간' 때문입니다.
+    st.markdown("""
+    ### 📝 학생 탐구 과제 (수치 제어 및 실험)
+    * **실험 1 (유출 빈도의 영향)**: 팔로워 수는 `500명`으로 고정하고, 스토리를 `1개` 올렸을 때와 `8개` 올렸을 때 그래프의 상승 각도가 어떻게 달라지는지 비교해 보세요. (스토리가 많을수록 노출 빈도가 늘어나 확산 속도가 수직 상승합니다.)
+    * **실험 2 (네트워크 규모의 영향)**: 스토리는 `2개`로 고정하고, 팔로워 수를 `200명`에서 `10,000명`으로 올렸을 때 도달하는 인구의 폭발 규모를 그래프 눈금(Y축)을 통해 확인해 봅시다.
     """)
-    
-    if st.button("🔄 시뮬레이션 및 그래프 리셋"):
+
+    if st.button("🔄 시뮬레이션 및 그래프 초기화"):
         st.session_state.chart_data = pd.DataFrame(columns=["시간(초)", "피해 유저 수(명)"]).set_index("시간(초)")
         st.rerun()
