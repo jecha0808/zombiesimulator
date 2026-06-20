@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. 페이지 설정
 st.set_page_config(
     page_title="[디지털 윤리] 정보 확산 속도 체험하기",
     page_icon="🔒",
@@ -13,7 +12,7 @@ st.markdown("""
 교과서 225쪽 실습 앱입니다. 화면을 크게 키우면서도 **3D 시뮬레이션 공간 전체가 한눈에 보이도록** 카메라 앵글을 최적화했습니다.
 """)
 
-# 2. 사이드바 인터페이스
+# 사이드바
 st.sidebar.header("⚙️ 시뮬레이션 환경 설정")
 
 my_followers = st.sidebar.slider(
@@ -31,42 +30,45 @@ story_count = st.sidebar.slider(
     min_value=1, max_value=10, value=2, step=1
 )
 
-# ───── 누적 피해 풀 & 확산 속도 ─────
+# 누적 피해 풀 & 확산 속도
 total_potential_pool = int(my_followers * (1 + (friends_followers * 0.4)))
 calculated_speed = story_count * (1 + (friends_followers * 0.01))
 
-# ───── ⭐ 시각화 공 개수 계산 (0~100 구간은 1:1 매핑) ⭐ ─────
-def map_followers(val, threshold=100, slider_max=1000, max_extra=50):
-    """
-    val ≤ threshold → 1:1 매핑
-    val > threshold → threshold~(threshold+max_extra)로 압축
-    """
+# ───── ⭐ 시각화 공 개수 계산 ⭐ ─────
+def map_followers(val, threshold, slider_max, max_extra):
     if val <= threshold:
         return val
     else:
         ratio = (val - threshold) / (slider_max - threshold)
         return threshold + int(ratio * max_extra)
 
-visual_my       = map_followers(my_followers,      threshold=100, slider_max=1000, max_extra=50)
-visual_extended = map_followers(friends_followers, threshold=100, slider_max=500,  max_extra=50)
-VISUAL_USERS    = max(1, min(250, visual_my + visual_extended))
+# 내 팔로워: 0~100 1:1, 100~1000 압축
+visual_my       = map_followers(my_followers, threshold=100, slider_max=1000, max_extra=50)
+# 친구 팔로워: 0~500 전 구간 1:1
+visual_extended = map_followers(friends_followers, threshold=500, slider_max=500, max_extra=0)
+
+# 안전 상한선 400개
+VISUAL_USERS = max(1, min(400, visual_my + visual_extended))
 
 # 사이드바 안내
 st.sidebar.markdown("---")
 st.sidebar.metric(
     label="🎯 현재 시뮬레이션 공 개수",
     value=f"{VISUAL_USERS}개",
-    help="0~100명까지는 1:1로 정확히 매핑되며, 그 이상은 화면 가독성을 위해 압축됩니다."
+    help="친구 팔로워는 0~500 전 구간이 1:1로 매핑됩니다. 내 팔로워는 0~100까지 1:1입니다."
 )
 
 exact_my       = "✅ 1:1" if my_followers      <= 100 else "📦 압축"
-exact_extended = "✅ 1:1" if friends_followers <= 100 else "📦 압축"
+exact_extended = "✅ 1:1"  # 친구는 항상 1:1
 
 st.sidebar.caption(
     f"• 내 직접 영향권: **{visual_my}명** ({exact_my})\n\n"
     f"• 친구의 친구까지: **+{visual_extended}명** ({exact_extended})\n\n"
     f"• 누적 피해 규모(수치): **{total_potential_pool:,}명**"
 )
+
+if VISUAL_USERS >= 350:
+    st.sidebar.warning("⚠️ 공이 매우 많아 브라우저 성능에 따라 다소 버벅일 수 있습니다.")
 
 st.sidebar.markdown("---")
 st.sidebar.info("""
@@ -75,7 +77,7 @@ st.sidebar.info("""
 * 휠을 스크롤하면 **확대/축소(Zoom)**가 가능합니다.
 """)
 
-# 3. 메인 화면 (3D 시뮬레이션 + 차트)
+# 메인 임베디드 HTML
 combined_embedded_code = f"""
 <!DOCTYPE html>
 <html>
@@ -136,20 +138,22 @@ combined_embedded_code = f"""
     const container = document.getElementById('canvas-container');
     const infoOverlay = document.getElementById('info-overlay');
 
-    const VISUAL_USERS = {VISUAL_USERS}; 
-    const MAX_TARGET_USERS = {total_potential_pool}; 
+    const VISUAL_USERS = {VISUAL_USERS};
+    const MAX_TARGET_USERS = {total_potential_pool};
     const sharing_speed = {calculated_speed};
     const dt = 0.02;
 
-    // 공이 많아질수록 자동으로 크기·충돌거리 축소
-    const sphereRadius   = VISUAL_USERS > 150 ? 0.25 : (VISUAL_USERS > 80 ? 0.35 : 0.48);
-    const collisionDist  = sphereRadius * 2.2;
+    // 공 개수에 따른 자동 크기 조정 (4단계)
+    const sphereRadius = VISUAL_USERS > 300 ? 0.20
+                       : VISUAL_USERS > 150 ? 0.28
+                       : VISUAL_USERS > 80  ? 0.36
+                       : 0.48;
+    const collisionDist = sphereRadius * 2.2;
 
     let time_elapsed = 0;
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
 
-    // --- 📊 Chart.js ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
     let realtimeChart = new Chart(ctx, {{
         type: 'line',
@@ -167,7 +171,6 @@ combined_embedded_code = f"""
         }}
     }});
 
-    // --- 🎮 Three.js ---
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
     camera.position.set(0, 0, 45);
