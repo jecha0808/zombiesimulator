@@ -1,10 +1,9 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. 스트림릿 웹 화면 구성 및 페이지 설정
 st.set_page_config(
-    page_title="[디지털 윤리] 정보 확산 속도 체험하기", 
-    page_icon="🔒", 
+    page_title="[디지털 윤리] 정보 확산 속도 체험하기",
+    page_icon="🔒",
     layout="wide"
 )
 
@@ -13,44 +12,55 @@ st.markdown("""
 교과서 225쪽 실습 앱입니다. 화면을 크게 키우면서도 **3D 시뮬레이션 공간 전체가 한눈에 보이도록** 카메라 앵글을 최적화했습니다.
 """)
 
-# 2. 사이드바 인터페이스 구성
+# 2. 사이드바
 st.sidebar.header("⚙️ 시뮬레이션 환경 설정")
 
 my_followers = st.sidebar.slider(
-    "1. 나의 팔로워 수 (명)", 
-    min_value=0, 
-    max_value=1000, 
-    value=30, 
-    step=10
+    "1. 나의 팔로워 수 (명)",
+    min_value=0, max_value=1000, value=30, step=10
 )
-
 friends_followers = st.sidebar.slider(
-    "2. 내 친구들의 평균 팔로워 수 (명)", 
-    min_value=0, 
-    max_value=500, 
-    value=100, 
-    step=10
+    "2. 내 친구들의 평균 팔로워 수 (명)",
+    min_value=0, max_value=500, value=100, step=10
 )
-
 story_count = st.sidebar.slider(
-    "3. 게시글 확산 빈도 (단위)", 
-    min_value=1, 
-    max_value=10, 
-    value=2, 
-    step=1
+    "3. 게시글 확산 빈도 (단위)",
+    min_value=1, max_value=10, value=2, step=1
 )
 
+# ───── 누적 피해 풀 & 확산 속도 ─────
 total_potential_pool = int(my_followers * (1 + (friends_followers * 0.4)))
 calculated_speed = story_count * (1 + (friends_followers * 0.01))
+
+# ───── ⭐ 시각화 공 개수 계산 ⭐ ─────
+# 내 팔로워 → 3~50개 (직접 영향권)
+visual_my       = max(3, min(50, my_followers // 20))
+# 친구의 팔로워 → 0~150개 (2차 확산권)
+visual_extended = min(150, friends_followers // 3)
+# 최종 시각화 인원 (최소 10명, 최대 200명)
+VISUAL_USERS    = max(10, min(200, visual_my + visual_extended))
+
+# 사이드바에 시각화 안내 표시
+st.sidebar.markdown("---")
+st.sidebar.metric(
+    label="🎯 현재 시뮬레이션 공 개수",
+    value=f"{VISUAL_USERS}개",
+    help="내 팔로워와 친구 팔로워 수에 비례해 화면 속 공 개수가 조절됩니다."
+)
+st.sidebar.caption(
+    f"• 내 직접 영향권: **{visual_my}명**\n\n"
+    f"• 친구의 친구까지: **+{visual_extended}명**\n\n"
+    f"• 누적 피해 규모: **{total_potential_pool:,}명**"
+)
 
 st.sidebar.markdown("---")
 st.sidebar.info("""
 **💡 조작 가이드**
 * 🖱️ 3D 공간을 **드래그**하면 회전합니다.
-* 휠을 스크롤하면 **확대/축소(Zoom)**가 가능하여 전체 모습을 조절할 수 있습니다.
+* 휠을 스크롤하면 **확대/축소(Zoom)**가 가능합니다.
 """)
 
-# 3. 메인 화면 구성
+# 3. 메인 임베디드 코드
 combined_embedded_code = f"""
 <!DOCTYPE html>
 <html>
@@ -62,7 +72,6 @@ combined_embedded_code = f"""
             font-family: sans-serif; color: white; overflow: hidden;
             display: flex; flex-direction: column; height: 100vh;
         }}
-        /* 🚀 프레임은 크게 유지 */
         #canvas-container {{ 
             width: 100%; height: 53vh; position: relative; background: #141414; 
             border-bottom: 2px solid #333;
@@ -72,6 +81,12 @@ combined_embedded_code = f"""
             color: #00f2ff; font-size: 15px; font-weight: bold;
             background: rgba(0,0,0,0.85); padding: 8px 22px; border-radius: 30px;
             z-index: 10; border: 1px solid #333; text-align: center;
+        }}
+        #ball-count-badge {{
+            position: absolute; top: 15px; left: 15px;
+            color: #ffd166; font-size: 12px; font-weight: bold;
+            background: rgba(0,0,0,0.85); padding: 6px 14px; border-radius: 6px;
+            z-index: 10; border: 1px solid #333;
         }}
         #chart-container {{ 
             width: 96%; margin: auto; height: 37vh;
@@ -92,6 +107,7 @@ combined_embedded_code = f"""
 <body>
 
 <div id="canvas-container">
+    <div id="ball-count-badge">🟢 사용자 수: {VISUAL_USERS}명</div>
     <div id="info-overlay">⏳ 시뮬레이션 준비 중...</div>
 </div>
 
@@ -104,17 +120,22 @@ combined_embedded_code = f"""
 <script>
     const container = document.getElementById('canvas-container');
     const infoOverlay = document.getElementById('info-overlay');
-    
-    const VISUAL_USERS = 70; 
+
+    // ⭐ 파이썬에서 계산된 값을 그대로 받음
+    const VISUAL_USERS = {VISUAL_USERS}; 
     const MAX_TARGET_USERS = {total_potential_pool}; 
     const sharing_speed = {calculated_speed};
     const dt = 0.02;
-    
+
+    // 공이 많아질수록 크기·충돌거리 자동 축소
+    const sphereRadius   = VISUAL_USERS > 120 ? 0.28 : (VISUAL_USERS > 60 ? 0.38 : 0.48);
+    const collisionDist  = sphereRadius * 2.2;
+
     let time_elapsed = 0;
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
-    
-    // --- 📊 Chart.js 설정 ---
+
+    // --- 📊 Chart.js ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
     let realtimeChart = new Chart(ctx, {{
         type: 'line',
@@ -123,9 +144,7 @@ combined_embedded_code = f"""
             backgroundColor: 'rgba(255, 77, 77, 0.1)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 0
         }}] }},
         options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
+            responsive: true, maintainAspectRatio: false, animation: false,
             scales: {{
                 x: {{ grid: {{ color: '#333' }}, ticks: {{ color: '#94a3b8' }} }},
                 y: {{ min: 0, max: MAX_TARGET_USERS, grid: {{ color: '#333' }}, ticks: {{ color: '#94a3b8' }} }}
@@ -134,21 +153,18 @@ combined_embedded_code = f"""
         }}
     }});
 
-    // --- 🎮 Three.js 무대 구축 (원거리 뷰 최적화) ---
+    // --- 🎮 Three.js ---
     const scene = new THREE.Scene();
-    
-    // 💡 FOV를 45로 낮추고 camera.position.z를 45로 대폭 뒤로 밀어 전체 상자가 짤림 없이 다 보이게 수정
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 0, 45); 
-    
+    camera.position.set(0, 0, 45);
+
     const renderer = new THREE.WebGLRenderer({{ antialias: true }});
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
 
-    // 마우스 휠 줌 기능 추가 (수업 중 크기 조절 용이하도록)
     window.addEventListener('wheel', (e) => {{
         camera.position.z += e.deltaY * 0.02;
-        camera.position.z = Math.max(20, Math.min(camera.position.z, 80)); // 줌 제한
+        camera.position.z = Math.max(20, Math.min(camera.position.z, 80));
     }}, {{ passive: true }});
 
     window.addEventListener('resize', () => {{
@@ -161,18 +177,17 @@ combined_embedded_code = f"""
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
     dirLight.position.set(10, 20, 15);
     scene.add(dirLight);
-    
-    // 테두리 상자 크기 정의
+
     const BOX_SIZE = 12;
     const boxWireframe = new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(BOX_SIZE * 2, BOX_SIZE * 2, BOX_SIZE * 2)),
         new THREE.LineBasicMaterial({{ color: 0x555555, linewidth: 1.0 }})
     );
     scene.add(boxWireframe);
-    
+
     let users = [];
-    const sphereGeom = new THREE.SphereGeometry(0.45, 16, 16); // 공 크기도 상자 비례 적절하게 조정
-    const redMat = new THREE.MeshPhongMaterial({{ color: 0xff4d4d, emissive: 0x220000, shininess: 50 }});
+    const sphereGeom = new THREE.SphereGeometry(sphereRadius, 16, 16);
+    const redMat   = new THREE.MeshPhongMaterial({{ color: 0xff4d4d, emissive: 0x220000, shininess: 50 }});
     const whiteMat = new THREE.MeshPhongMaterial({{ color: 0xffffff, shininess: 30 }});
 
     function setupUsers() {{
@@ -181,18 +196,16 @@ combined_embedded_code = f"""
         for (let i = 0; i < VISUAL_USERS; i++) {{
             const isFirst = (i === 0);
             const mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
-            // 상자 밖으로 나가지 않게 범위 제한 (-11 ~ 11)
             mesh.position.set((Math.random()*22)-11, (Math.random()*22)-11, (Math.random()*22)-11);
             scene.add(mesh);
-            users.push({{ 
-                mesh: mesh, 
-                velocity: new THREE.Vector3((Math.random()*2)-1, (Math.random()*2)-1, (Math.random()*2)-1).normalize(), 
-                infected: isFirst 
+            users.push({{
+                mesh: mesh,
+                velocity: new THREE.Vector3((Math.random()*2)-1, (Math.random()*2)-1, (Math.random()*2)-1).normalize(),
+                infected: isFirst
             }});
         }}
     }}
 
-    // 마우스 드래그 회전 로직
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     container.addEventListener('mousedown', () => {{ isDragging = true; }});
@@ -247,16 +260,15 @@ combined_embedded_code = f"""
             if (Math.abs(u.mesh.position.z) >= b) {{ u.velocity.z *= -1; u.mesh.position.z = u.mesh.position.z > 0 ? b : -b; }}
         }});
 
-        // 충돌 및 전파
         for (let i = 0; i < users.length; i++) {{
             for (let j = i + 1; j < users.length; j++) {{
-                if (users[i].mesh.position.distanceTo(users[j].mesh.position) < 1.0) {{
+                if (users[i].mesh.position.distanceTo(users[j].mesh.position) < collisionDist) {{
                     if (users[i].infected && !users[j].infected) {{ users[j].mesh.material = redMat; users[j].infected = true; infected_visual_count++; }}
                     else if (users[j].infected && !users[i].infected) {{ users[i].mesh.material = redMat; users[i].infected = true; infected_visual_count++; }}
                 }}
             }}
         }}
-        
+
         boxWireframe.rotation.y += 0.001;
         renderer.render(scene, camera);
     }}
