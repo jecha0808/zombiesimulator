@@ -16,10 +16,9 @@ st.markdown("""
 """)
 st.markdown("---")
 
-# 2. 사이드바 인터페이스 구성 (아이들 눈높이에 맞춘 세밀한 수치 조정)
+# 2. 사이드바 인터페이스 구성 (학생 실시간 조작 변수)
 st.sidebar.header("⚙️ 내 인스타그램 환경 변수 설정")
 
-# 💡 최소 수치를 10명으로 전격 대폭 낮추고, 10명 단위로 조절 가능하게 수정!
 follower_count = st.sidebar.slider(
     "1. 나의 팔로워 수 (명)", 
     min_value=10, 
@@ -47,13 +46,36 @@ st.sidebar.info("""
 * 🖱️ 3D 화면을 마우스 드래그하면 공간을 돌려볼 수 있습니다.
 """)
 
-# 3. 레이아웃 분할 (좌측: 3D 시뮬레이터 및 실시간 차트 통합 브라우저 / 우측: 탐구 활동 발문)
-col_sim, col_guide = st.columns([1.3, 0.7])
+
+# 🧑‍🏫 [선생님 전용 기능] 교사용 가이드 및 선생님 한마디 숨김 메뉴
+st.sidebar.markdown("---")
+with st.sidebar.expander("🔐 💡 교사용 수업 가이드 (선생님만 클릭!)"):
+    st.markdown(f"""
+    <div style="padding: 10px; border-radius: 5px; background-color: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; font-size: 13px;">
+        <b>현재 세팅 요약</b><br>
+        • 학생 설정 팔로워: <b>{follower_count}명</b><br>
+        • 학생 설정 스토리: <b>{story_count}개</b>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.caption("""
+    📢 **선생님 한마디 & 지도 팁**
+    
+    "얘들아, 내 팔로워가 10명밖에 안 된다고 해서 내가 올린 비밀이나 사진이 안전할까? 
+    내가 올린 스토리 수가 많아지면 하단 그래프의 기울기가 엄청나게 가팔라지는 걸 봐봐. 
+    
+    비록 내 팔로워는 10명이지만, 그 10명의 친구들에게도 각자 10명씩의 또 다른 팔로워들이 겹겹이 연결되어 있단다. 결국 디지털 세상에서는 내가 단 10명에게만 보여준 이야기라도 궤적(선)을 그리며 순식간에 외부로 퍼져나갈 수 있어!"
+    
+    **💡 수업 추천 발문:**
+    1. 팔로워 수를 10명으로 고정하고 스토리를 1개에서 10개로 늘릴 때 그래프의 '폭발 시점(기울기)'이 얼마나 당겨지는지 비교하게 하세요.
+    2. 수치를 변경한 후에는 화면 내에 있는 '🔄 시뮬레이션 리셋' 버튼을 누르도록 안내해 주세요.
+    """)
+
+# 3. 레이아웃 분할 (메인 화면 극대화)
+col_sim, col_empty = st.columns([1.8, 0.2]) # 화면을 넓게 쓰기 위해 비율 조정
 
 with col_sim:
-    st.subheader("🎮 3D 확산 가상 공간 & 실시간 통계 그래프")
-    
-    # 3D 렌더러와 고성능 Chart.js 그래프를 한 컨텍스트 안에 묶어 동기화 오류를 원천 차단한 HTML/JS 템플릿
+    # 3D 렌더러, Chart.js 그래프, 그리고 리셋 버튼까지 하나의 JS 컨텍스트로 묶어 완벽한 리셋 구현
     combined_embed_code = f"""
     <!DOCTYPE html>
     <html>
@@ -68,8 +90,17 @@ with col_sim:
                 background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px; text-align: center;
                 pointer-events: none; width: 80%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 1.4; z-index: 10;
             }}
-            #chart-container {{ width: 95%; margin: 15px auto; background: #262626; padding: 15px; border-radius: 10px; box-sizing: border-box; }}
+            #chart-container {{ width: 95%; margin: 15px auto; background: #262626; padding: 15px; border-radius: 10px; box-sizing: border-box; position: relative; }}
             h4 {{ margin: 0 0 10px 0; color: #cbd5e1; font-size: 14px; }}
+            
+            /* 자바스크립트 통합형 리셋 버튼 스타일 */
+            .reset-btn {{
+                position: absolute; right: 15px; top: 10px;
+                background-color: #ef4444; color: white; border: none;
+                padding: 6px 12px; font-size: 12px; font-weight: bold;
+                border-radius: 5px; cursor: pointer; transition: background 0.2s;
+            }}
+            .reset-btn:hover {{ background-color: #dc2626; }}
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -81,8 +112,9 @@ with col_sim:
     </div>
 
     <div id="chart-container">
-        <h4>📈 실시간 정보 확산 속도 곡선 (Y축 최대치: {follower_count:,}명 규모)</h4>
-        <canvas id="realtimeChart" height="110"></canvas>
+        <h4>선택 수치 기반 실시간 확산 속도 곡선 (Y축 최대치: {follower_count:,}명 규모)</h4>
+        <button class="reset-btn" onclick="resetSimulation()">🔄 시뮬레이션 리셋</button>
+        <canvas id="realtimeChart" height="100"></canvas>
     </div>
     
     <script>
@@ -99,37 +131,41 @@ with col_sim:
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
     const dt = 0.02;
+    let animationFrameId;
     
-    // --- Chart.js 초기화 로직 ---
+    // --- Chart.js 초기화 ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
-    const chartData = {{
-        labels: [0],
-        datasets: [{{
-            label: '피해 팔로워 수 (명)',
-            data: [1],
-            borderColor: '#ff4d4d',
-            backgroundColor: 'rgba(255, 77, 77, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.3,
-            pointRadius: 0
-        }}]
-    }};
-    const config = {{
-        type: 'line',
-        data: chartData,
-        options: {{
-            responsive: true,
-            plugins: {{ legend: {{ display: false }} }},
-            scales: {{
-                x: {{ title: {{ display: true, text: '시간 (초)', color: '#94a3b8' }}, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }},
-                y: {{ title: {{ display: true, text: '피해 인원 (명)', color: '#94a3b8' }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }}
-            }}
-        }}
-    }};
-    const realtimeChart = new Chart(ctx, config);
+    let realtimeChart;
     
-    // --- Three.js 3D 환경 빌드 ---
+    function initChart() {{
+        if(realtimeChart) {{ realtimeChart.destroy(); }}
+        realtimeChart = new Chart(ctx, {{
+            type: 'line',
+            data: {{
+                labels: [0],
+                datasets: [{{
+                    label: '피해 팔로워 수 (명)',
+                    data: [1],
+                    borderColor: '#ff4d4d',
+                    backgroundColor: 'rgba(255, 77, 77, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                plugins: {{ legend: {{ display: false }} }},
+                scales: {{
+                    x: {{ title: {{ display: true, text: '시간 (초)', color: '#94a3b8' }}, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }},
+                    y: {{ title: {{ display: true, text: '피해 인원 (명)', color: '#94a3b8' }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }}
+                }}
+            }}
+        }});
+    }}
+    
+    // --- Three.js 환경 초기화 ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a1a);
     
@@ -165,23 +201,35 @@ with col_sim:
     const trailLine = new THREE.Line(trailGeometry, trailMaterial);
     scene.add(trailLine);
     
-    for (let i = 0; i < VISUAL_USERS; i++) {{
-        const isFirst = (i === 0);
-        const mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
-        mesh.position.set(
-            (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
-            (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
-            (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1)
-        );
-        scene.add(mesh);
-        
-        users.push({{
-            mesh: mesh,
-            velocity: new THREE.Vector3((Math.random()*2)-1, (Math.random()*2)-1, (Math.random()*2)-1).normalize(),
-            infected: isFirst
-        }});
+    // 유저 노드 배치 및 속도 기입 함수
+    function setupUsers() {{
+        users.length = 0;
+        for (let i = 0; i < VISUAL_USERS; i++) {{
+            const isFirst = (i === 0);
+            let mesh;
+            if(scene.children.includes(users[i]?.mesh)) {{
+                mesh = users[i].mesh;
+                mesh.material = isFirst ? redMat : whiteMat;
+            }} else {{
+                mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
+                scene.add(mesh);
+            }}
+            
+            mesh.position.set(
+                (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
+                (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
+                (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1)
+            );
+            
+            users.push({{
+                mesh: mesh,
+                velocity: new THREE.Vector3((Math.random()*2)-1, (Math.random()*2)-1, (Math.random()*2)-1).normalize(),
+                infected: isFirst
+            }});
+        }}
     }}
     
+    // 마우스 핸들러 익명 제어
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     window.addEventListener('mousedown', function(e) {{ isDragging = true; }});
@@ -201,8 +249,19 @@ with col_sim:
     }});
     window.addEventListener('mouseup', function(e) {{ isDragging = false; }});
     
+    // 🔄 내부 즉각 리셋 제어 함수 (렉 원천 차단)
+    window.resetSimulation = function() {{
+        time_elapsed = 0;
+        infected_visual_count = 1;
+        last_chart_update_time = 0;
+        trailPoints.length = 0;
+        initChart();
+        setupUsers();
+    }}
+    
+    // 메인 루프 실행 부
     function animate() {{
-        requestAnimationFrame(animate);
+        animationFrameId = requestAnimationFrame(animate);
         
         if (infected_visual_count < VISUAL_USERS) {{
             time_elapsed += dt;
@@ -260,33 +319,14 @@ with col_sim:
         }}
         renderer.render(scene, camera);
     }}
+    
+    // 초기 로딩 프로세서
+    initChart();
+    setupUsers();
     animate();
     </script>
     </body>
     </html>
     """
     
-    components.html(combined_embed_code, height=600, scrolling=False)
-
-with col_guide:
-    st.subheader("🧑‍🏫 중학교 정보윤리 실습 가이드")
-    
-    st.markdown(f"""
-    <div style="padding: 12px; border-radius: 8px; background-color: #f8fafc; color: #1e293b; border-left: 5px solid #10b981; margin-bottom: 15px;">
-        ⚙️ <b>내 SNS 실시간 반영 데이터</b><br>
-        • 나의 실제 팔로워 규모: <b>{follower_count}명</b><br>
-        • 내가 올린 스토리 수: <b>{story_count}개</b>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.info("""
-    📢 **소규모 네트워크(팔로워 10~50명) 수업 지도 팁**
-    
-    "얘들아, 내 팔로워가 10명밖에 안 된다고 해서 내가 올린 비밀이나 사진이 안전할까? 
-    내가 올린 스토리 수가 많아지면 하단 그래프의 기울기가 엄청나게 가팔라지는 걸 봐봐. 
-    
-    비록 내 팔로워는 10명이지만, 그 10명의 친구들에게도 각자 10명씩의 또 다른 팔로워들이 겹겹이 연결되어 있단다. 결국 디지털 세상에서는 내가 단 10명에게만 보여준 이야기라도 궤적(선)을 그리며 순식간에 외부로 퍼져나갈 수 있어!"
-    """)
-    
-    if st.button("🔄 시뮬레이션 및 그래프 처음부터 다시 시작"):
-        st.rerun()
+    components.html(combined_embed_code, height=620, scrolling=False)
