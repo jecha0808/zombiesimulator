@@ -21,7 +21,7 @@ with st.form("student_feedback_form"):
         if c_name and c_class and c_num:
             # 💡 구글 폼의 '사전 채우기 링크'를 활용하여 데이터 전송
             # 선생님의 구글 폼 URL로 교체하세요!
-            form_url = "https://forms.gle/kC27hvAHsHaJrECU7" 
+            form_url = "https://docs.google.com/spreadsheets/d/1O8VwyjNp08xU_H-JcMBFSBtXBJRn3-sOB-jCESBKsM0/edit?usp=sharing" 
             st.success(f"{c_name} 학생, 제출 완료되었습니다! 확인해 주세요.")
         else:
             st.error("반, 번호, 이름을 모두 입력해주세요.")
