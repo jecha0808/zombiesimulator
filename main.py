@@ -300,4 +300,5 @@ combined_embedded_code = f"""
 </html>
 """
 
+
 components.html(combined_embedded_code, height=850, scrolling=False)
