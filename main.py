@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 # 1. 스트림릿 웹 화면 구성 및 페이지 설정
 st.set_page_config(
-    page_title="정보윤리 시뮬레이터", 
+    page_title="정보윤리 3D 시뮬레이터", 
     page_icon="🔒", 
     layout="wide"
 )
@@ -18,7 +18,6 @@ st.markdown("---")
 # 2. 사이드바 인터페이스 구성 (학생 조작 포인트)
 st.sidebar.header("⚙️ 시뮬레이션 환경 제어")
 
-# 학생들이 직접 수정해 볼 수 있는 전역 설정 변수들
 sharing_speed = st.sidebar.slider(
     "1. SNS 공유 빈도 (공들의 속도)", 
     min_value=1, 
@@ -40,115 +39,187 @@ st.sidebar.info("""
 **💡 범례 가이드**
 * ⚪ **하얀 공**: 안전한 일반 SNS 사용자
 * 🔴 **빨간 공**: 개인정보 유출 피해자
-* 🖱️ 3D 화면을 마우스 드래그로 회전하거나, 마우스 휠로 확대/축소할 수 있습니다.
+* 🖱️ 3D 화면을 마우스 클릭 후 드래그하면 카메라 각도를 돌려볼 수 있습니다.
 """)
 
 # 3. 레이아웃 분할 (좌측: 3D 시뮬레이터 / 우측: 탐구 리포트 및 발문)
 col_sim, col_guide = st.columns([1.3, 0.7])
 
 with col_sim:
-    st.subheader("🎮 3D 네트워크 확산 가상 공간 (Web VPython)")
+    st.subheader("🎮 3D 네트워크 확산 가상 공간")
     
-    # 스트림릿의 입력값을 자바스크립트 엔진으로 전달하여 Web VPython(GlowScript) 가동
-    vpython_embed_code = f"""
+    # 스트림릿 내 임베딩을 위해 웹 표준 Three.js 엔진으로 재가공한 3D 시뮬레이터 템플릿
+    threejs_embed_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
-        <script src="https://www.glowscript.org/package/glowscript.2.9.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <style>
+            body {{ margin: 0; overflow: hidden; background-color: #1a1a1a; }}
+            #canvas-container {{ width: 100vw; height: 100vh; position: relative; }}
+            #info-overlay {{ 
+                position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+                color: white; font-family: sans-serif; font-size: 16px; font-weight: bold;
+                background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; text-align: center;
+                pointer-events: none; width: 80%;
+            }}
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     </head>
     <body>
-    <div id="glowscript" class="glowscript"></div>
+    <div id="canvas-container">
+        <div id="info-overlay">준비 중...</div>
+    </div>
+    
     <script>
-    window.__context = {{
-        glowscript_container: $("#glowscript")
-    }};
+    const container = document.getElementById('canvas-container');
+    const infoOverlay = document.getElementById('info-overlay');
     
-    // 3차원 캔버스 설정
-    scene = canvas({{width: 650, height: 500, center: vec(0,0,0)}});
-    scene.background = color.gray(0.1);
+    // 환경 설정 변수 주입
+    const CONTAINER_SIZE = 15;
+    const NUM_USERS = {num_users};
+    const BALL_RADIUS = 0.5;
+    const sharing_speed = {sharing_speed};
     
-    var CONTAINER_SIZE = 20;
-    var NUM_USERS = {num_users};
-    var BALL_RADIUS = 0.6;
-    var sharing_speed = {sharing_speed};
+    let time_elapsed = 0;
+    let infected_count = 1;
+    const dt = 0.03;
     
-    // 투명한 3D 상자 테두리 생성
-    box({{pos: vec(0,0,0), size: vec(CONTAINER_SIZE*2, CONTAINER_SIZE*2, CONTAINER_SIZE*2), opacity: 0.1, color: color.white}});
+    // 3D 씬, 카메라, 렌더러 설정
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
     
-    var users = [];
-    var time_elapsed = 0;
-    var infected_count = 1;
-    var dt = 0.05;
+    const camera = new THREE.PerspectiveCamera(60, 650 / 500, 0.1, 1000);
+    camera.position.set(0, 0, 35);
     
-    // 객체 초기 생성 및 3차원 랜덤 배치
-    for(var i=0; i<NUM_USERS; i++) {{
-        var rx = (Math.random() * (CONTAINER_SIZE*2 - 4)) - (CONTAINER_SIZE - 2);
-        var ry = (Math.random() * (CONTAINER_SIZE*2 - 4)) - (CONTAINER_SIZE - 2);
-        var rz = (Math.random() * (CONTAINER_SIZE*2 - 4)) - (CONTAINER_SIZE - 2);
+    const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+    renderer.setSize(650, 500);
+    container.appendChild(renderer.domElement);
+    
+    // 조명 추가
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(20, 40, 20);
+    scene.add(dirLight);
+    
+    // 외곽 테두리 상자 그리드 생성
+    const boxGeom = new THREE.BoxGeometry(CONTAINER_SIZE * 2, CONTAINER_SIZE * 2, CONTAINER_SIZE * 2);
+    const edges = new THREE.EdgesGeometry(boxGeom);
+    const lineMat = new THREE.LineBasicMaterial({{ color: 0xffffff, linewidth: 2 }});
+    const boxWireframe = new THREE.LineSegments(edges, lineMat);
+    scene.add(boxWireframe);
+    
+    // 공 객체 배열 생성
+    const users = [];
+    const sphereGeom = new THREE.SphereGeometry(BALL_RADIUS, 16, 16);
+    
+    const whiteMat = new THREE.MeshPhongMaterial({{ color: 0xffffff, shininess: 30 }});
+    const redMat = new THREE.MeshPhongMaterial({{ color: 0xff0000, shininess: 30 }});
+    
+    for (let i = 0; i < NUM_USERS; i++) {{
+        const isFirst = (i === 0);
+        const mesh = new THREE.Mesh(sphereGeom, isFirst ? redMat : whiteMat);
         
-        var u_color = (i == 0) ? color.red : color.white;
-        var u_infected = (i == 0) ? true : false;
+        // 박스 내부 임의 위치 지정
+        mesh.position.set(
+            (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
+            (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1),
+            (Math.random() * (CONTAINER_SIZE * 2 - 2)) - (CONTAINER_SIZE - 1)
+        );
         
-        var user = sphere({{pos: vec(rx, ry, rz), radius: BALL_RADIUS, color: u_color}});
+        scene.add(mesh);
         
-        // 3차원 랜덤 방향 벡터 설정
-        var vx = (Math.random() * 2) - 1;
-        var vy = (Math.random() * 2) - 1;
-        var vz = (Math.random() * 2) - 1;
-        user.velocity = vec(vx, vy, vz).norm();
-        user.infected = u_infected;
+        // 이동 방향 무작위 지정
+        const dir = new THREE.Vector3(
+            (Math.random() * 2) - 1,
+            (Math.random() * 2) - 1,
+            (Math.random() * 2) - 1
+        ).normalize();
         
-        users.push(user);
+        users.push({{
+            mesh: mesh,
+            velocity: dir,
+            infected: isFirst
+        }});
     }}
     
-    var label_info = label({{pos: vec(0, CONTAINER_SIZE + 3, 0), text: "준비 중...", height: 14}});
+    // 간단한 마우스 회전 제어 감지
+    let isDragging = false;
+    let previousMousePosition = {{ x: 0, y: 0 }};
     
-    // 메인 시뮬레이션 프레임 연산 루프
-    function runSimulation() {{
+    window.addEventListener('mousedown', (e) => {{ isDragging = true; }});
+    window.addEventListener('mousemove', (e) => {{
+        const deltaMove = {{ x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y }};
+        if (isDragging) {{
+            boxWireframe.rotation.y += deltaMove.x * 0.005;
+            boxWireframe.rotation.x += deltaMove.y * 0.005;
+            users.forEach(u => {{
+                // 유저 공들도 상자 회전에 따라 공전 효과 부여
+                u.mesh.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaMove.x * 0.005);
+                u.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.y * 0.005);
+                u.velocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaMove.x * 0.005);
+                u.velocity.applyAxisAngle(new THREE.Vector3(1, 0, 0), deltaMove.y * 0.005);
+            }});
+        }}
+        previousMousePosition = {{ x: e.offsetX, y: e.offsetY }};
+    }});
+    window.addEventListener('mouseup', (e) => {{ isDragging = false; }}});
+    
+    // 메인 프레임 애니메이션 루프
+    function animate() {{
+        requestAnimationFrame(animate);
+        
         if (infected_count < NUM_USERS) {{
             time_elapsed += dt;
         }}
         
-        label_info.text = "⏳ 걸린 시간: " + time_elapsed.toFixed(1) + "초 | 🔴 감염 계정: " + infected_count + " / " + NUM_USERS + "개";
+        infoOverlay.innerText = "⏳ 걸린 시간: " + time_elapsed.toFixed(1) + "초 | 🔴 감염 계정: " + infected_count + " / " + NUM_USERS + "개";
         
-        // 1. 3D 이동 및 공간 벽면 충돌 처리
-        for(var i=0; i<users.length; i++) {{
-            var user = users[i];
-            user.pos = user.pos.add(user.velocity.multiply(sharing_speed * dt));
+        // 1. 공 이동 및 상자 벽 충돌 반사 연산
+        for (let i = 0; i < users.length; i++) {{
+            const u = users[i];
             
-            // X, Y, Z축 경계면 반사 처리
-            if(Math.abs(user.pos.x) >= CONTAINER_SIZE - BALL_RADIUS) {{
-                user.velocity.x = -user.velocity.x;
-                user.pos.x = user.pos.x > 0 ? (CONTAINER_SIZE - BALL_RADIUS) : -(CONTAINER_SIZE - BALL_RADIUS);
+            // 위치 업데이트 (방향 * 입력 속도 * dt)
+            u.mesh.position.x += u.velocity.x * sharing_speed * dt;
+            u.mesh.position.y += u.velocity.y * sharing_speed * dt;
+            u.mesh.position.z += u.velocity.z * sharing_speed * dt;
+            
+            const boundary = CONTAINER_SIZE - BALL_RADIUS;
+            
+            // X축 벽면 바운스
+            if (Math.abs(u.mesh.position.x) >= boundary) {{
+                u.velocity.x = -u.velocity.x;
+                u.mesh.position.x = u.mesh.position.x > 0 ? boundary : -boundary;
             }}
-            if(Math.abs(user.pos.y) >= CONTAINER_SIZE - BALL_RADIUS) {{
-                user.velocity.y = -user.velocity.y;
-                user.pos.y = user.pos.y > 0 ? (CONTAINER_SIZE - BALL_RADIUS) : -(CONTAINER_SIZE - BALL_RADIUS);
+            // Y축 벽면 바운스
+            if (Math.abs(u.mesh.position.y) >= boundary) {{
+                u.velocity.y = -u.velocity.y;
+                u.mesh.position.y = u.mesh.position.y > 0 ? boundary : -boundary;
             }}
-            if(Math.abs(user.pos.z) >= CONTAINER_SIZE - BALL_RADIUS) {{
-                user.velocity.z = -user.velocity.z;
-                user.pos.z = user.pos.z > 0 ? (CONTAINER_SIZE - BALL_RADIUS) : -(CONTAINER_SIZE - BALL_RADIUS);
+            // Z축 벽면 바운스
+            if (Math.abs(u.mesh.position.z) >= boundary) {{
+                u.velocity.z = -u.velocity.z;
+                u.mesh.position.z = u.mesh.position.z > 0 ? boundary : -boundary;
             }}
         }}
         
-        // 2. 이중 반복문을 활용한 구체 간 3차원 충돌 감지 및 전파
-        for(var i=0; i<users.length; i++) {{
-            for(var j=i+1; j<users.length; j++) {{
-                var u1 = users[i];
-                var u2 = users[j];
+        // 2. 공들 사이의 충돌체크 및 감염 확산 알고리즘
+        for (let i = 0; i < users.length; i++) {{
+            for (let j = i + 1; j < users.length; j++) {{
+                const u1 = users[i];
+                const u2 = users[j];
                 
-                // 두 점 사이의 3차원 거리 계산
-                var dist = u1.pos.sub(u2.pos).mag;
+                const dist = u1.mesh.position.distanceTo(u2.mesh.position);
                 
-                if(dist < (BALL_RADIUS * 2)) {{
-                    if(u1.infected && !u2.infected) {{
-                        u2.color = color.red;
+                // 두 구체가 물리적으로 교차했을 때 충돌 인정
+                if (dist < (BALL_RADIUS * 2)) {{
+                    if (u1.infected && !u2.infected) {{
+                        u2.mesh.material = redMat;
                         u2.infected = true;
                         infected_count++;
-                    }} else if(u2.infected && !u1.infected) {{
-                        u1.color = color.red;
+                    }} else if (u2.infected && !u1.infected) {{
+                        u1.mesh.material = redMat;
                         u1.infected = true;
                         infected_count++;
                     }}
@@ -156,28 +227,25 @@ with col_sim:
             }}
         }}
         
-        // 루프 제어
-        if(infected_count < NUM_USERS) {{
-            setTimeout(runSimulation, 16); // 약 60fps에 맞추어 루프 실행
-        }} else {{
-            label_info.text = "🚨 전원 유출 완료! 총 확산 시간: " + time_elapsed.toFixed(1) + "초";
+        if (infected_count >= NUM_USERS) {{
+            infoOverlay.innerHTML = "🚨 <span style='color:#ff4d4d;'>전원 유출 완료!</span> 총 확산 시간: " + time_elapsed.toFixed(1) + "초";
         }}
+        
+        renderer.render(scene, camera);
     }}
     
-    // 스타트 딜레이 후 실행
-    setTimeout(runSimulation, 300);
+    animate();
     </script>
     </body>
     </html>
     """
     
-    # 스트림릿 컴포넌트로 3D 화면 띄우기
-    components.html(vpython_embed_code, height=560, scrolling=False)
+    # 스트림릿 내부에 안정적인 3D 그래픽 프레임 크기로 인젝션
+    components.html(threejs_embed_code, height=520, scrolling=False)
 
 with col_guide:
     st.subheader("💡 수업용 탐구 활동 보고서")
     
-    # 현재 적용된 설정을 카드 형태로 보기 좋게 시각화
     st.markdown(f"""
     <div style="padding: 15px; border-radius: 8px; background-color: #f1f5f9; color: #1e293b; border-left: 5px solid #ef4444; margin-bottom: 20px;">
         📌 <b>현재 네트워크 설정 데이터</b><br>
@@ -196,10 +264,8 @@ with col_guide:
        * 속도 `12` 일 때 걸린 시간: ( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ) 초
     
     2. **생각 확장하기 질문 (발문)**
-       * 사각형 교실(2D)에서 소문이 퍼지는 속도와 비교했을 때, 전 방향(3D)으로 연결된 디지털 공간의 확산 특징은 무엇인가요?
-       * 단 한 번의 단톡방 유출이 왜 무서운지 시뮬레이션 속 **'빨간 공의 증가 곡선 유형'**을 바탕으로 설명해 봅시다.
+       * 전 방향(3D)으로 실시간 연결된 디지털 공간의 확산 속도 그래프는 어떤 특징을 보이나요?
     """)
 
-    # 시뮬레이션 새로고침을 위한 스트림릿 내장 버튼
     if st.button("🔄 시뮬레이션 다시 시작하기"):
         st.rerun()
