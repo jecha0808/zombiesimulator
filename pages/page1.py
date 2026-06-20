@@ -6,7 +6,7 @@ st.markdown("---")
 st.header("📝 [활동지] 정보 확산 분석 및 윤리적 실천 다짐")
 
 # 👇 본인 구글 폼의 formResponse URL과 entry ID로 교체
-GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/여기_본인_폼_ID/formResponse"
+GOOGLE_FORM_URL = "https://docs.google.com/spreadsheets/d/1O8VwyjNp08xU_H-JcMBFSBtXBJRn3-sOB-jCESBKsM0/edit?usp=sharing"
 ENTRY_CLASS    = "entry.1111111111"
 ENTRY_NUM      = "entry.2222222222"
 ENTRY_NAME     = "entry.3333333333"
