@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. 스트림릿 웹 화면 구성 및 페이지 설정
+# 1. 스트림릿 웹 화면 구성 및 페이지 설정 (최대한 넓게 쓰도록 와이드 지정)
 st.set_page_config(
     page_title="정보윤리 3D 시뮬레이터", 
     page_icon="🔒", 
@@ -10,10 +10,8 @@ st.set_page_config(
 
 st.title("🔒 [정보윤리 실습] 2차 네트워크 기반 정보 확산 실시간 시뮬레이션")
 st.markdown("""
-교과서 225쪽 **'디지털 공간의 정보 확산'** 단원 실습 앱입니다.  
-왼쪽 제어창에서 환경을 바꾸어 보세요. 수치를 변경하는 즉시 **시간 경과에 따른 실시간 확산 그래프**가 하단에 동적으로 그려집니다.
+교과서 225쪽 **'디지털 공간의 정보 확산'** 단원 실습 앱입니다. 왼쪽 제어창에서 환경을 바꾸면 **실시간 그래프**가 하단에 즉각 동적으로 그려집니다.
 """)
-st.markdown("---")
 
 # 2. 사이드바 인터페이스 구성
 st.sidebar.header("⚙️ 내 인스타그램 환경 변수 설정")
@@ -64,18 +62,12 @@ with st.sidebar.expander("🔐 💡 교사용 수업 가이드 (선생님만 클
         • 건너건너 연결된 잠재 피해 규모: <b>{total_potential_pool:,}명</b>
     </div>
     """, unsafe_allow_html=True)
-    st.caption("""
-    📢 **선생님 한마디 & 지도 팁**
-    "얘들아, 내 팔로워는 30명뿐이지만 우측 하단 그래프가 실시간으로 치솟는 걸 보렴. 
-    시간이 지나면서 친구의 친구들이 확인하는 순간 기울기가 무섭게 급해지지? 
-    이게 바로 인터넷 공간에서 단 한 번의 유출이 걷잡을 수 없는 대재앙이 되는 이유란다."
-    """)
 
-# 3. 메인 화면 구성 (3D와 그래프를 한 프레임 안에 묶어 실시간 유기적 동기화 구현)
-col_main, col_empty = st.columns([1.8, 0.2])
+# 3. 메인 화면 구성 (한 화면에 다 담기도록 전체 컴포넌트의 높이를 축소 및 슬림화)
+col_main, col_empty = st.columns([1.9, 0.1])
 
 with col_main:
-    # 3D 물리 엔진의 프레임과 Chart.js를 완벽하게 동기화시킨 임베드 시스템
+    # 한 화면 안에서 3D(위)와 그래프(아래)가 스크롤 없이 모두 렌더링되도록 설계한 임베드
     combined_embedded_code = f"""
     <!DOCTYPE html>
     <html>
@@ -83,19 +75,19 @@ with col_main:
         <meta charset="utf-8">
         <style>
             body {{ margin: 0; padding: 0; background-color: #1a1a1a; font-family: sans-serif; color: white; overflow: hidden; }}
-            #canvas-container {{ width: 100%; height: 340px; position: relative; background: #1a1a1a; }}
+            #canvas-container {{ width: 100%; height: 230px; position: relative; background: #1a1a1a; }}
             #info-overlay {{ 
-                position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-                color: white; font-size: 13px; font-weight: bold;
-                background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px; text-align: center;
+                position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+                color: white; font-size: 12px; font-weight: bold;
+                background: rgba(0,0,0,0.85); padding: 6px 14px; border-radius: 20px; text-align: center;
                 pointer-events: none; width: 85%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10;
             }}
-            #chart-container {{ width: 98%; margin: 10px auto; background: #262626; padding: 15px; border-radius: 10px; box-sizing: border-box; position: relative; }}
-            h4 {{ margin: 0 0 8px 0; color: #cbd5e1; font-size: 14px; }}
+            #chart-container {{ width: 98%; margin: 5px auto; background: #262626; padding: 10px 15px; border-radius: 8px; box-sizing: border-box; position: relative; }}
+            h4 {{ margin: 0 0 5px 0; color: #cbd5e1; font-size: 13px; }}
             .reset-btn {{
-                position: absolute; right: 15px; top: 10px;
+                position: absolute; right: 15px; top: 8px;
                 background-color: #ef4444; color: white; border: none;
-                padding: 5px 10px; font-size: 11px; font-weight: bold;
+                padding: 4px 8px; font-size: 11px; font-weight: bold;
                 border-radius: 4px; cursor: pointer;
             }}
             .reset-btn:hover {{ background-color: #dc2626; }}
@@ -110,9 +102,9 @@ with col_main:
     </div>
 
     <div id="chart-container">
-        <h4>📊 시간 경과에 따른 누적 확산 유저 수 (실시간 드로잉)</h4>
-        <button class="reset-btn" onclick="resetAll()">🔄 시뮬레이션 처음부터 다시 시작</button>
-        <canvas id="realtimeChart" height="90"></canvas>
+        <h4>📊 시간 경과에 따른 누적 확산 유저 수 (Y축 최대: {total_potential_pool:,}명 규모)</h4>
+        <button class="reset-btn" onclick="resetAll()">🔄 처음부터 다시 시작</button>
+        <canvas id="realtimeChart" height="70"></canvas>
     </div>
     
     <script>
@@ -129,7 +121,7 @@ with col_main:
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
     
-    // --- 📊 실시간 Chart.js 초기화 및 인스턴스 핸들링 ---
+    // --- 📊 실시간 Chart.js 설정 ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
     let realtimeChart;
     
@@ -144,7 +136,7 @@ with col_main:
                     data: [1],
                     borderColor: '#ff4d4d',
                     backgroundColor: 'rgba(255, 77, 77, 0.08)',
-                    borderWidth: 3,
+                    borderWidth: 2.5,
                     fill: true,
                     tension: 0.3,
                     pointRadius: 0
@@ -152,25 +144,25 @@ with col_main:
             }},
             options: {{
                 responsive: true,
-                animation: false, // 실시간 드로잉을 위해 불필요한 차트 내부 애니메이션 비활성화
+                animation: false,
                 plugins: {{ legend: {{ display: false }} }},
                 scales: {{
-                    x: {{ title: {{ display: true, text: '경과 시간 (초)', color: '#94a3b8' }}, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }},
-                    y: {{ title: {{ display: true, text: '총 피해 (명)', color: '#94a3b8' }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8' }}, grid: {{ color: '#404040' }} }}
+                    x: {{ title: {{ display: true, text: '경과 시간 (초)', color: '#94a3b8', font: {{ size: 10 }} }}, ticks: {{ color: '#94a3b8', font: {{ size: 10 }} }}, grid: {{ color: '#404040' }} }},
+                    y: {{ title: {{ display: true, text: '총 피해 (명)', color: '#94a3b8', font: {{ size: 10 }} }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8', font: {{ size: 10 }} }}, grid: {{ color: '#404040' }} }}
                 }}
             }}
         }});
     }}
     
-    // --- 🎮 Three.js 물리 엔진 무대 구축 ---
+    // --- 🎮 Three.js 무대 구축 ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a1a);
     
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / 340, 0.1, 1000);
-    camera.position.set(0, 0, 30);
+    const camera = new THREE.PerspectiveCamera(55, container.clientWidth / 230, 0.1, 1000);
+    camera.position.set(0, 0, 28);
     
     const renderer = new THREE.WebGLRenderer({{ antialias: true }});
-    renderer.setSize(container.clientWidth, 340);
+    renderer.setSize(container.clientWidth, 230);
     container.appendChild(renderer.domElement);
     
     scene.add(new THREE.AmbientLight(0xffffff, 0.8));
@@ -180,7 +172,7 @@ with col_main:
     
     const boxWireframe = new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(CONTAINER_SIZE * 2, CONTAINER_SIZE * 2, CONTAINER_SIZE * 2)),
-        new THREE.LineBasicMaterial({{ color: 0x555555, linewidth: 1.2 }})
+        new THREE.LineBasicMaterial({{ color: 0x555555, linewidth: 1.0 }})
     );
     scene.add(boxWireframe);
     
@@ -201,7 +193,7 @@ with col_main:
         }}
     }}
     
-    // 🖱️ 마우스 회전 인터랙션 구현
+    // 마우스 회전 제어
     let isDragging = false;
     let previousMousePosition = {{ x: 0, y: 0 }};
     window.addEventListener('mousedown', () => {{ isDragging = true; }});
@@ -221,7 +213,7 @@ with col_main:
     }});
     window.addEventListener('mouseup', () => {{ isDragging = false; }});
     
-    // 🔄 완전 리셋 트리거 함수
+    // 리셋
     window.resetAll = function() {{
         time_elapsed = 0;
         infected_visual_count = 1;
@@ -230,7 +222,6 @@ with col_main:
         setupUsers();
     }}
     
-    // --- 🎮 실시간 연동 메인 그래픽스 루프 ---
     function animate() {{
         requestAnimationFrame(animate);
         
@@ -238,28 +229,24 @@ with col_main:
             time_elapsed += dt;
         }}
         
-        // 3D 물리 감염률을 실제 스케일링 인구수에 투영 연산
         const infectionRatio = infected_visual_count / VISUAL_USERS;
         let scaledInfected = Math.floor(infectionRatio * MAX_TARGET_USERS);
         if (scaledInfected === 0 && infected_visual_count > 0) scaledInfected = 1;
         if (infected_visual_count === VISUAL_USERS) scaledInfected = MAX_TARGET_USERS;
         
-        // 상단 텍스트 전광판 실시간 정보 갱신
         if (scaledInfected < MAX_TARGET_USERS) {{
-            infoOverlay.innerHTML = "⏱️ 경과 시간: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
+            infoOverlay.innerHTML = "⏱️ 경과: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
         }} else {{
-            infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d;'>전파 완료: 네트워크 내 " + MAX_TARGET_USERS.toLocaleString() + "명 전원 유출</span> | ⏳ 총 소요시간: " + time_elapsed.toFixed(1) + "초";
+            infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d;'>전파 완료: 네트워크 내 " + MAX_TARGET_USERS.toLocaleString() + "명 전체 유출</span>";
         }}
         
-        // 💡 핵심: 0.15초마다 자바스크립트 차트에 데이터를 실시간으로 Push하여 실시간 시각화!
         if (time_elapsed - last_chart_update_time > 0.15 && infected_visual_count <= VISUAL_USERS) {{
             realtimeChart.data.labels.push(time_elapsed.toFixed(1));
             realtimeChart.data.datasets[0].data.push(scaledInfected);
-            realtimeChart.update(); // 선 그래프 동적 렌더링
+            realtimeChart.update();
             last_chart_update_time = time_elapsed;
         }}
         
-        // 3D 공들의 프레임 이동 및 경계선 충돌 물리 연산
         for (let i = 0; i < users.length; i++) {{
             const u = users[i];
             u.mesh.position.addScaledVector(u.velocity, sharing_speed * dt);
@@ -270,7 +257,6 @@ with col_main:
             if (Math.abs(u.mesh.position.z) >= b) {{ u.velocity.z *= -1; u.mesh.position.z = u.mesh.position.z > 0 ? b : -b; }}
         }}
         
-        // 공들끼리 마주쳤을 때 감염 전파 매커니즘
         for (let i = 0; i < users.length; i++) {{
             for (let j = i + 1; j < users.length; j++) {{
                 if (users[i].mesh.position.distanceTo(users[j].mesh.position) < 1.0) {{
@@ -280,11 +266,10 @@ with col_main:
             }}
         }}
         
-        boxWireframe.rotation.y += 0.001; // 공간 미세 자동 회전
+        boxWireframe.rotation.y += 0.001;
         renderer.render(scene, camera);
     }}
     
-    // 빌드 기동
     initChart();
     setupUsers();
     animate();
@@ -292,4 +277,5 @@ with col_main:
     </body>
     </html>
     """
-    components.html(combined_embedded_code, height=540, scrolling=False)
+    # 임베디드 HTML 프레임 총 높이도 440px로 함께 줄여서 스크롤바가 생기지 않도록 차단
+    components.html(combined_embedded_code, height=440, scrolling=False)
