@@ -4,19 +4,19 @@ import requests
 st.markdown("---")
 st.header("📝 [활동지] 정보 확산 분석 및 윤리적 실천 다짐")
 
-# ✅ 본인 구글 폼 정보 (이미 매칭 완료)
+# ✅ 구글 폼 정보
 GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeeEazvp_aUDB0T2Syaab1JrxayUt_ltVU2b_1lONbwKsXT8A/formResponse"
 ENTRY_CLASS    = "entry.1744528295"   # 반
 ENTRY_NUM      = "entry.973302941"    # 번호
 ENTRY_NAME     = "entry.560543267"    # 이름
-ENTRY_ANALYSIS = "entry.1308568821"   # 시뮬레이션 관찰 및 데이터 해석
-ENTRY_PROMISE  = "entry.867457307"    # 디지털 정보 윤리에 대한 나의 다짐
-ENTRY_ACTION   = "entry.553841103"    # 향후 실천할 구체적인 행동 수칙
+ENTRY_ANALYSIS = "entry.1308568821"   # 분석
+ENTRY_PROMISE  = "entry.867457307"    # 다짐
+ENTRY_ACTION   = "entry.553841103"    # 실천
 
 with st.form("student_feedback_form"):
     col1, col2, col3 = st.columns(3)
-    c_class = col1.text_input("반")
-    c_num   = col2.text_input("번호")
+    c_class = col1.selectbox("반", [f"{i}반" for i in range(1, 11)])      # 1~10반
+    c_num   = col2.selectbox("번호", [f"{i}번" for i in range(1, 34)])    # 1~33번
     c_name  = col3.text_input("이름")
 
     analysis    = st.text_area("1. 시뮬레이션 관찰 및 데이터 해석")
@@ -26,8 +26,8 @@ with st.form("student_feedback_form"):
     submitted = st.form_submit_button("학습지 제출하기")
 
     if submitted:
-        if not (c_name and c_class and c_num):
-            st.error("반, 번호, 이름을 모두 입력해주세요.")
+        if not c_name.strip():
+            st.error("이름을 입력해주세요.")
         else:
             payload = {
                 ENTRY_CLASS:    c_class,
@@ -45,7 +45,7 @@ with st.form("student_feedback_form"):
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
                 if r.status_code in (200, 302):
-                    st.success(f"✅ {c_name} 학생, 제출 완료되었습니다!")
+                    st.success(f"✅ {c_class} {c_num} {c_name} 학생, 제출 완료되었습니다!")
                 else:
                     st.error(f"제출 실패 (상태코드 {r.status_code})")
             except Exception as e:
