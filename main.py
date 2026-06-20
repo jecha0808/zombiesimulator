@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. 스트림릿 웹 화면 구성 및 페이지 설정 (최대한 넓게 쓰도록 와이드 지정)
+# 1. 스트림릿 웹 화면 구성 및 페이지 설정
 st.set_page_config(
     page_title="정보윤리 3D 시뮬레이터", 
     page_icon="🔒", 
@@ -63,11 +63,10 @@ with st.sidebar.expander("🔐 💡 교사용 수업 가이드 (선생님만 클
     </div>
     """, unsafe_allow_html=True)
 
-# 3. 메인 화면 구성 (한 화면에 다 담기도록 전체 컴포넌트의 높이를 축소 및 슬림화)
+# 3. 메인 화면 구성
 col_main, col_empty = st.columns([1.9, 0.1])
 
 with col_main:
-    # 한 화면 안에서 3D(위)와 그래프(아래)가 스크롤 없이 모두 렌더링되도록 설계한 임베드
     combined_embedded_code = f"""
     <!DOCTYPE html>
     <html>
@@ -121,7 +120,7 @@ with col_main:
     let infected_visual_count = 1;
     let last_chart_update_time = 0;
     
-    // --- 📊 실시간 Chart.js 설정 ---
+    // --- 📊 실시간 Chart.js 설정 (Y축 0 고정 패치) ---
     const ctx = document.getElementById('realtimeChart').getContext('2d');
     let realtimeChart;
     
@@ -148,7 +147,17 @@ with col_main:
                 plugins: {{ legend: {{ display: false }} }},
                 scales: {{
                     x: {{ title: {{ display: true, text: '경과 시간 (초)', color: '#94a3b8', font: {{ size: 10 }} }}, ticks: {{ color: '#94a3b8', font: {{ size: 10 }} }}, grid: {{ color: '#404040' }} }},
-                    y: {{ title: {{ display: true, text: '총 피해 (명)', color: '#94a3b8', font: {{ size: 10 }} }}, min: 0, max: MAX_TARGET_USERS, ticks: {{ color: '#94a3b8', font: {{ size: 10 }} }}, grid: {{ color: '#404040' }} }}
+                    y: {{ 
+                        title: {{ display: true, text: '총 피해 (명)', color: '#94a3b8', font: {{ size: 10 }} }}, 
+                        min: 0, // 💡 최소값을 0으로 강제 고정
+                        max: MAX_TARGET_USERS, 
+                        ticks: {{ 
+                            color: '#94a3b8', 
+                            font: {{ size: 10 }},
+                            beginAtZero: true // 💡 0부터 무조건 출력되도록 설정
+                        }}, 
+                        grid: {{ color: '#404040' }} 
+                    }}
                 }}
             }}
         }});
@@ -235,7 +244,7 @@ with col_main:
         if (infected_visual_count === VISUAL_USERS) scaledInfected = MAX_TARGET_USERS;
         
         if (scaledInfected < MAX_TARGET_USERS) {{
-            infoOverlay.innerHTML = "⏱️ 경과: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
+            infoOverlay.innerHTML = "⏱ nighttime: " + time_elapsed.toFixed(1) + "초 | 🚨 <span style='color:#ff4d4d;'>누적 확산 피해: " + scaledInfected.toLocaleString() + "명</span> / " + MAX_TARGET_USERS.toLocaleString() + "명";
         }} else {{
             infoOverlay.innerHTML = "🏁 <span style='color:#ff4d4d;'>전파 완료: 네트워크 내 " + MAX_TARGET_USERS.toLocaleString() + "명 전체 유출</span>";
         }}
@@ -277,5 +286,4 @@ with col_main:
     </body>
     </html>
     """
-    # 임베디드 HTML 프레임 총 높이도 440px로 함께 줄여서 스크롤바가 생기지 않도록 차단
     components.html(combined_embedded_code, height=440, scrolling=False)
