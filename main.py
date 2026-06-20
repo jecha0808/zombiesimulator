@@ -3,12 +3,12 @@ import streamlit.components.v1 as components
 
 # 1. 스트림릿 웹 화면 구성 및 페이지 설정
 st.set_page_config(
-    page_title="정보윤리 3D 시뮬레이터 (최적화 버전)", 
+    page_title="[디지털 윤리] 정보 확산 속도 체험하기", 
     page_icon="🔒", 
     layout="wide"
 )
 
-st.title("🔒 [정보윤리 실습] 2차 네트워크 기반 정보 확산 실시간 시뮬레이션")
+st.title("🔒 [디지털 윤리] 정보 확산 속도 체험하기")
 st.markdown("""
 교과서 225쪽 실습 앱입니다. 화면을 크게 키우면서도 **3D 시뮬레이션 공간 전체가 한눈에 보이도록** 카메라 앵글을 최적화했습니다.
 """)
