@@ -45,7 +45,7 @@ with st.form("student_feedback_form"):
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
                 if r.status_code in (200, 302):
-                    st.success(f"✅ {c_class} {c_num} {c_name} 학생, 제출 완료되었습니다!")
+                    st.success(f"✅ {c_class}반 {c_num}번 {c_name} 학생, 제출 완료되었습니다!")
                 else:
                     st.error(f"제출 실패 (상태코드 {r.status_code})")
             except Exception as e:
