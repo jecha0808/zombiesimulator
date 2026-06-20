@@ -15,8 +15,8 @@ ENTRY_ACTION   = "entry.553841103"    # 실천
 
 with st.form("student_feedback_form"):
     col1, col2, col3 = st.columns(3)
-    c_class = col1.selectbox("반", [f"{i}반" for i in range(1, 11)])      # 1~10반
-    c_num   = col2.selectbox("번호", [f"{i}번" for i in range(1, 34)])    # 1~33번
+    c_class = col1.selectbox("반", [f"{i}" for i in range(1, 11)])      # 1~10반
+    c_num   = col2.selectbox("번호", [f"{i}" for i in range(1, 34)])    # 1~33번
     c_name  = col3.text_input("이름")
 
     analysis    = st.text_area("1. 시뮬레이션 관찰 및 데이터 해석")
