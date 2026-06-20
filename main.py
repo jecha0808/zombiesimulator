@@ -18,7 +18,7 @@ st.sidebar.header("⚙️ 시뮬레이션 환경 설정")
 
 my_followers = st.sidebar.slider(
     "1. 나의 팔로워 수 (명)", 
-    min_value=10, 
+    min_value=0, 
     max_value=1000, 
     value=30, 
     step=10
@@ -26,7 +26,7 @@ my_followers = st.sidebar.slider(
 
 friends_followers = st.sidebar.slider(
     "2. 내 친구들의 평균 팔로워 수 (명)", 
-    min_value=10, 
+    min_value=0, 
     max_value=500, 
     value=100, 
     step=10
